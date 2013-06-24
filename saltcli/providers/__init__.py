@@ -23,6 +23,19 @@ class Provider(object):
   def list_instances(self):
     pass
     
+  def highstate(self, conf={}):
+    name = conf.get('original_name', "master")
+    if name == "master":
+      cmd = "salt *"
+      inst = self._master_server()
+    else:
+      cmd = "salt-call"
+      inst = self.get(name)
+      
+    hosts = [inst.ip_address]
+    
+    self.ssh.sudo_command(inst, "{0} state.highstate".format(cmd))
+    
   ## PRIVATE
   def bootstrap(self, inst, conf={}):
     # local_file

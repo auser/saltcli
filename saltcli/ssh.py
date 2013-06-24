@@ -25,6 +25,12 @@ class Ssh(object):
       run("{0}".format(cmd))
     execute(_run_command, hosts=env.hosts)
     
+  def sudo_command(self, inst, cmd, obj={}):
+    env = self._env(inst)
+    def _run_command():
+      sudo("{0}".format(cmd))
+    execute(_run_command, hosts=env.hosts)
+    
   def upload(self, inst, local_file, remote_file='/srv/salt', obj={}):
     env = self._env(inst)
     if isinstance(local_file, list):
