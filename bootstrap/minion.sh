@@ -45,14 +45,8 @@ echo """
 roles:
 """ > /etc/salt/minion.d/roles
 
-for i in $(echo $IN | tr ";" "\n")
+for i in $(echo $ROLES | tr "," "\n")
 do
   echo "  - ${i}" >> /etc/salt/minion.d/roles
 done
-
-
-sudo /etc/init.d/salt-minion restart
-
-echo "------> The minion is booted and waiting for approval
-Log in to the master machine and accept the key"
 

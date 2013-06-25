@@ -31,7 +31,7 @@ working_obj = {
   'config': os.path.join(working_dir, 'salt-config.yml'),
   'environment': 'development',
   'plan': None,
-  'roles': None,
+  'roles': [],
   }
 
 def main(argv):
