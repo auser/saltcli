@@ -27,7 +27,7 @@ hostname `cat /etc/hostname`
 # latest open-source efforts
 #
 # Eventually, we can come to settle down on our own way of bootstrapping
-\curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
+curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
 
 # Set salt master location and start minion
 echo """
