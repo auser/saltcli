@@ -49,12 +49,14 @@ def main(argv):
   working_obj['command'] = command
   
   try:
-    opts, args = getopt.getopt(argv[2:], 'hdn:c:e:p:r:y', ['help', 
+    opts, args = getopt.getopt(argv[2:], 'hdn:c:e:p:r:ya', ['help', 
                                             'debug',
                                             'name=',
                                             'config=',
                                             'environment=',
                                             'plan=',
+                                            'yes',
+                                            'all',
                                             ])
   except getopt.error, msg:
     print msg
@@ -80,6 +82,8 @@ def main(argv):
       working_obj['config'] = a
     elif o in ('-p', '--plan'):
       working_obj['plan'] = a
+    elif o in ('-a', '--all'):
+      working_obj['all'] = True
     else:
       assert False, help()
   

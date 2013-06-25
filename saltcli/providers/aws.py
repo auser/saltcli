@@ -56,11 +56,15 @@ class Aws(Provider):
       
   def teardown(self, name):
     """Teardown"""
-    inst = self.get(name)
+    if isinstance(name, boto.ec2.instance.Instance):
+      inst = name
+      name = inst.tags['name']
+    else:
+      inst = self.get(name)
     if inst:
       print "Tearing down instance: {0}".format(name)
       self.conn.terminate_instances([inst.id])
-      self.provider.remove_minion_key(name)
+      self.remove_minion_key(name)
     else:
       print "Could not find instance by name {0}".format(name)
       
@@ -109,6 +113,9 @@ class Aws(Provider):
           for port in ports:
             rule = SecurityGroupRule(str(proto), str(port), str(port), str(cidr), None)
             expected_rules.append(rule)
+    
+    for g in self.conn.get_all_security_groups():
+      expected_rules.append(SecurityGroupRule('tcp', 22, 65535, '0.0.0.0/0', g.name))
     
     current_rules = []
     for rule in group.rules:
