@@ -34,10 +34,14 @@ class Provider(object):
     else:
       cmd = "salt-call"
       inst = self.get(name)
-      
-    hosts = [inst.ip_address]
     
-    self.ssh.sudo_command(inst, "{0} state.highstate".format(cmd))
+    if inst:
+      hosts = [inst.ip_address]
+    
+      self.ssh.sudo_command(inst, "{0} mine.update".format(cmd))
+      self.ssh.sudo_command(inst, "{0} state.highstate".format(cmd))
+    else:
+      print "There was an error finding the instance you're referring to by name: {0}".format(name)
     
   ## PRIVATE
   def bootstrap(self, inst, conf={}):
@@ -96,12 +100,14 @@ class Provider(object):
           key_path = os.path.join(pki_dir, key_dir)
           sudo("mkdir -p {0}".format(key_path))
           
+      for key_dir in ('minions_pre', 'minions_rejected'):
+        oldkey = os.path.join(pki_dir, key_dir, name)
+        sudo("rm -f {0}".format(oldkey))
+        
       key = os.path.join(pki_dir, 'minions', name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
-
-      oldkey = os.path.join(pki_dir, 'minions_pre', name)
-      sudo("rm -f {0}".format(oldkey))
+      
     
     self.ssh.execute(inst, _create)
     self.ssh.execute(self._master_server(), _accept)

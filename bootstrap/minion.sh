@@ -42,11 +42,13 @@ grains:
 """ > /etc/salt/minion
 
 echo """
+environment: $ENV
+index: $INDEX
 roles:
-""" > /etc/salt/minion.d/roles
+""" > /etc/salt/grains
 
 for i in $(echo $ROLES | tr "," "\n")
 do
-  echo "  - ${i}" >> /etc/salt/minion.d/roles
+  echo "  - ${i}" >> /etc/salt/grains
 done
 
