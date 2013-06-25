@@ -149,14 +149,14 @@ class Aws(Provider):
           src_group = self.conn.get_all_security_groups([rule.src_group_name,])[0]
  
       if authorize and not revoke:
-          print "Authorizing missing rule %s..."%(rule,)
+          # print "Authorizing missing rule %s..."%(rule,)
           group.authorize(ip_protocol=rule.ip_protocol,
                           from_port=str(rule.from_port),
                           to_port=str(rule.to_port),
                           cidr_ip=rule.cidr_ip,
                           src_group=src_group)
       elif not authorize and revoke:
-          print "Revoking unexpected rule %s..."%(rule,)
+          # print "Revoking unexpected rule %s..."%(rule,)
           group.revoke(ip_protocol=rule.ip_protocol,
                        from_port=str(rule.from_port),
                        to_port=str(rule.to_port),
