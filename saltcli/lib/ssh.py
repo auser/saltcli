@@ -54,6 +54,10 @@ class Ssh(object):
     print "Running: {0}".format(cmd)
     call(cmd, shell=True)
   
+  def execute(self, inst, m, **kwargs):
+    env = self._env(inst)
+    execute(m, **kwargs)
+  
   ## SSH Options
   def _ssh_opts_str(self, env):
     return " ".join([
@@ -83,3 +87,40 @@ class Ssh(object):
   def _execute(self, cmd, **kwargs):
     print "cmd: {0} {1}".format(cmd, kwargs)
     execute(cmd, **kwargs)
+    
+  ## Salt cloud
+  def wait_for_ssh(host, port=22, timeout=900):
+      '''
+      Wait until an ssh connection can be made on a specified host
+      '''
+      start = time.time()
+      log.debug(
+          'Attempting SSH connection to host {0} on port {1}'.format(
+              host, port
+          )
+      )
+      trycount = 0
+      while True:
+          trycount += 1
+          try:
+              sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+              sock.connect((host, port))
+              # Stop any remaining reads/writes on the socket
+              sock.shutdown(socket.SHUT_RDWR)
+              # Close it!
+              sock.close()
+              return True
+          except socket.error as exc:
+              log.debug('Caught exception in wait_for_ssh: {0}'.format(exc))
+              time.sleep(1)
+              if time.time() - start > timeout:
+                  log.error('SSH connection timed out: {0}'.format(timeout))
+                  return False
+
+              log.debug(
+                  'Retrying SSH connection to host {0} on port {1} '
+                  '(try {2})'.format(
+                      host, port, trycount
+                  )
+              )
+  

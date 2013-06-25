@@ -22,7 +22,6 @@ class Aws(Provider):
         retry = False
       except:
         time.sleep(10)
-    self.ssh.upload(instance, salt_dir, "/srv/salt", conf)
     return instance
     
   ## Launch a single instance
@@ -61,6 +60,7 @@ class Aws(Provider):
     if inst:
       print "Tearing down instance: {0}".format(name)
       self.conn.terminate_instances([inst.id])
+      self.provider.remove_minion_key(name)
     else:
       print "Could not find instance by name {0}".format(name)
       

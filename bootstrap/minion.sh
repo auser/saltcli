@@ -1,8 +1,11 @@
 #!/bin/bash
+# "/srv/salt/{script} {inst_name} {master_server} {env} {index} {rs}"
 
 HOSTNAME=${1:-minion}
 SALT_MASTER=${2:-192.168.98.11}
 ENV=${3:-development}
+INDEX=${4:-1}
+ROLES=${5:-salt}
 
 echo "------> Bootstrapping minion $HOSTNAME (master: $SALT_MASTER) for environment $ENV"
 
@@ -35,7 +38,18 @@ master: saltmaster
 id: $HOSTNAME
 grains:
   environment: $ENV
+  index: $INDEX
 """ > /etc/salt/minion
+
+echo """
+roles:
+""" > /etc/salt/minion.d/roles
+
+for i in $(echo $IN | tr ";" "\n")
+do
+  echo "  - ${i}" >> /etc/salt/minion.d/roles
+done
+
 
 sudo /etc/init.d/salt-minion restart
 

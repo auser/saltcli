@@ -1,4 +1,26 @@
-import sys
+import sys, os, shutil
+import tempfile
+import salt.crypt
+
+def gen_keys(keysize=2048):
+    '''
+    Generate Salt minion keys and return them as PEM file strings
+    '''
+    # Mandate that keys are at least 2048 in size
+    if keysize < 2048:
+        keysize = 2048
+    tdir = tempfile.mkdtemp()
+
+    salt.crypt.gen_keys(tdir, 'minion', keysize)
+    priv_path = os.path.join(tdir, 'minion.pem')
+    pub_path = os.path.join(tdir, 'minion.pub')
+    with salt.utils.fopen(priv_path) as fp_:
+        priv = fp_.read()
+    with salt.utils.fopen(pub_path) as fp_:
+        pub = fp_.read()
+    shutil.rmtree(tdir)
+    return priv, pub
+
 
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.

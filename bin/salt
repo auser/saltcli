@@ -49,7 +49,7 @@ def main(argv):
   working_obj['command'] = command
   
   try:
-    opts, args = getopt.getopt(argv[2:], 'hdn:c:e:p:r:', ['help', 
+    opts, args = getopt.getopt(argv[2:], 'hdn:c:e:p:r:y', ['help', 
                                             'debug',
                                             'name=',
                                             'config=',
@@ -72,6 +72,8 @@ def main(argv):
       working_obj['environment'] = a
     elif o in ('-r', '--roles'):
       working_obj['roles'] = a.split(",")
+    elif o in ('-y', '--yes'):
+      working_obj['answer_yes'] = True
     elif o in ('-c', '--config'):
       if a[0] != '/':
         a = os.path.join(working_dir, a)

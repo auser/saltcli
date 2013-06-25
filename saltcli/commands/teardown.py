@@ -10,7 +10,7 @@ class Teardown(Command):
     """Teardown"""
     name = self.obj['name']
     if self.provider.get(name):
-      if query_yes_no("Are you sure you want to tear down the {0} instance?".format(name)):
+      if self.obj.get('answer_yes', False) or query_yes_no("Are you sure you want to tear down the {0} instance?".format(name)):
         self.provider.teardown(self.obj['name'])
       else:
         print "Aborting"
