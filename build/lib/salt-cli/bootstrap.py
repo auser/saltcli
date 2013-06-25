@@ -11,7 +11,7 @@ user_data = open(os.path.join(this_dir, 'bootstrap', 'master.sh'))
 try:  
    access_key = os.environ['AWS_ACCESS_KEY_ID']
 except KeyError: 
-   print "Please set the environment variable AWS_SECRET_ACCESS_KEY"
+   print "Please set the environment variable AWS_ACCESS_KEY_ID"
    sys.exit(1)
 
 try:  
