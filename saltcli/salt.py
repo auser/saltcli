@@ -1,7 +1,6 @@
 import sys
 import yaml
 from commands import get_method
-from cloud import launch
 
 def run(args, obj):
   """Kick off"""

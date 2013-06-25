@@ -1,6 +1,6 @@
 from fabric.api import sudo
 from fabric.tasks import execute
-from saltcli.ssh import Ssh
+from saltcli.lib.ssh import Ssh
 import os
 
 class Provider(object):
