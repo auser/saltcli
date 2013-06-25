@@ -1,5 +1,5 @@
 import sys
-import yaml
+from lib.config import Config
 from commands import get_method
 
 def run(args, obj):
@@ -12,13 +12,11 @@ def run(args, obj):
   # launch()
 
 def _load_config(conf_file):
-  """Load the config"""
-  stream = open(conf_file)
-  return yaml.load(stream)
+  return Config(conf_file)
   
 def known_providers():
   """All know providers"""
-  return ('aws')
+  return ['aws']
 
 def known_commands():
   """All known commands"""

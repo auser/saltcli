@@ -1,1 +1,90 @@
-#!/usr/bin/env python
+#!env/bin/python
+
+import sys, getopt, os
+from saltcli import salt
+
+def help():
+  """Print help"""
+  print """
+  SaltCli is a tool to help you run salt, better, faster, and easier.
+  -------------------------
+  Usage:
+  salt [provider] [command] [options]
+  
+  Available providers: 
+  {providers}
+  
+  Available commands:
+  {commands}
+  """.format(
+    providers=", ".join(salt.known_providers()),
+    commands =", ".join(salt.known_commands()),
+  )
+  sys.exit(0)
+
+this_dir = os.path.dirname(os.path.realpath(__file__))
+working_dir = os.getcwd()
+
+working_obj = {
+  'debug': True,
+  'original_name': 'master',
+  'config': os.path.join(working_dir, 'salt-config.yml'),
+  'environment': 'development',
+  'plan': None,
+  'roles': None,
+  }
+
+def main(argv):
+  if len(argv) < 2:
+    help()
+  
+  provider = argv[0]
+  if not provider in salt.known_providers():
+    help()
+  working_obj['provider'] = provider
+  
+  command = argv[1]
+  if not command in salt.known_commands():
+    help()
+  working_obj['command'] = command
+  
+  try:
+    opts, args = getopt.getopt(argv[2:], 'hdn:c:e:p:r:', ['help', 
+                                            'debug',
+                                            'name=',
+                                            'config=',
+                                            'environment=',
+                                            'plan=',
+                                            ])
+  except getopt.error, msg:
+    print msg
+    print "for help use --help"
+    sys.exit(2)
+
+  for o, a in opts:
+    if o in ("-h", "--help"):
+      help()
+    elif o in ('-d', '--debug'):
+      working_obj['debug'] = True
+    elif o in ('-n', '--name'):
+      working_obj['original_name'] = a
+    elif o in ('-e', '--environment'):
+      working_obj['environment'] = a
+    elif o in ('-r', '--roles'):
+      working_obj['roles'] = a.split(",")
+    elif o in ('-c', '--config'):
+      if a[0] != '/':
+        a = os.path.join(working_dir, a)
+      working_obj['config'] = a
+    elif o in ('-p', '--plan'):
+      working_obj['plan'] = a
+    else:
+      assert False, help()
+  
+  for name in working_obj['original_name'].split(","):
+    working_obj['original_name'] = name
+    working_obj['name'] = working_obj['environment'] + "-" + name
+    salt.run(args, working_obj)
+
+if __name__ == "__main__":
+  main(sys.argv[1:])

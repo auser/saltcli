@@ -6,7 +6,8 @@ class Command(object):
   def __init__(self, provider_name, args, conf, obj):
     super(Command, self).__init__()
     self.args = args
-    self.config = conf
+    self.config = conf.yaml()
+    self.config_obj = conf
     self.obj = obj
     
     self.provider_name = provider_name
@@ -16,6 +17,7 @@ class Command(object):
   def load_provider(self):
     """docstring for load_provider"""
     provider_config = self.config['providers'][self.provider_name]
+    print "provider_name: {0}".format(provider_config)
     return get_provider(self.provider_name)(provider_config)
 
 def get_method(str):

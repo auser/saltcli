@@ -1,4 +1,5 @@
 from saltcli.commands import Command
+from saltcli.lib.utils import query_yes_no
 
 class Teardown(Command):
   """docstring for Teardown"""
@@ -7,4 +8,11 @@ class Teardown(Command):
     
   def run(self):
     """Teardown"""
-    self.provider.teardown(self.obj['name'])
+    name = self.obj['name']
+    if self.provider.get(name):
+      if query_yes_no("Are you sure you want to tear down the {0} instance?".format(name)):
+        self.provider.teardown(self.obj['name'])
+      else:
+        print "Aborting"
+    else:
+      print "No instance {0} was found, therefore it would be difficult to shut it down, wouldn't you agree?".format(name)

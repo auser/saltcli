@@ -1,6 +1,7 @@
 from fabric.api import sudo
 from fabric.tasks import execute
 from saltcli.lib.ssh import Ssh
+from saltcli.lib.utils import query_yes_no
 import os
 
 class Provider(object):
@@ -47,12 +48,13 @@ class Provider(object):
     if conf.get('original_name', 'master') == "master":
       script_name = "master.sh"
       local_file = c['master']
+      self.upload(inst, [])
     else:
       script_name = "minion.sh"
       local_file = c['minion']
       
-    self.upload(inst, [])
     self.ssh.upload(inst, local_file, "/srv/salt/")
+    index = len(self.list_instances()) + 1
     
     def bootstrap_script():
       # cmd = "sudo /bin/sh #{remotepath} #{provider.to_s} #{name} #{master_server.preferred_ip} #{environment} #{index} #{rs}"
@@ -62,8 +64,8 @@ class Provider(object):
         inst_name = conf['original_name'],
         master_server = self._master_server().ip_address,
         env = conf['environment'],
-        index = 1,
-        rs = "master"
+        index = index,
+        rs = ",".join(conf.get('roles', []))
       ))
     
     execute(bootstrap_script, hosts=[inst.ip_address])

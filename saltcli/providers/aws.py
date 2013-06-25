@@ -13,10 +13,23 @@ class Aws(Provider):
     
   ## Public methods
   def launch(self, conf={}):
-    """Launch"""
+    instance = self.launch_single_instance(conf)
+    salt_dir = os.path.join(os.getcwd(), "deploy", "salt")
+    retry = True
+    while retry:
+      try:
+        self.ssh.run_command(instance, "echo 'trying to connect...'", conf)
+        retry = False
+      except:
+        time.sleep(10)
+    self.ssh.upload(instance, salt_dir, "/srv/salt", conf)
+    return instance
+    
+  ## Launch a single instance
+  def launch_single_instance(self, conf):
     launch_config = self._load_machine_desc(conf['original_name'])
-    user_data = self._get_user_data(conf['original_name'])
     security_group = self._setup_security_group(conf, launch_config)
+    
     reservation = self.conn.run_instances(launch_config['image_id'], 
                             key_name=self.config['keyname'],
                             security_groups=[security_group.name],
@@ -32,6 +45,7 @@ class Aws(Provider):
         sys.stdout.flush()
         status = instance.update()
     print "Instance {0} launched at {1}".format(instance.id, instance.ip_address)
+    
     if status == 'running':
       instance.add_tag("name", conf['name'])
       instance.add_tag('original_name', conf['original_name'])
@@ -39,16 +53,6 @@ class Aws(Provider):
     else:
       print "Instance status: {0}".format(status)
       
-    salt_dir = os.path.join(os.getcwd(), "deploy", "salt")
-    retry = True
-    while retry:
-      try:
-        self.ssh.run_command(instance, "echo 'trying to connect...'", conf)
-        retry = False
-      except:
-        time.sleep(10)
-    self.ssh.upload(instance, salt_dir, "/srv/salt", conf)
-    
     return instance
       
   def teardown(self, name):

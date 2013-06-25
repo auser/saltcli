@@ -7,9 +7,17 @@ class Launch(Command):
     
   def run(self):
     """Launch"""
-    if not self.provider.get(self.obj['name']):
+    if self.obj['plan']:
+      for plan, pack in self.config_obj.plans().iteritems():
+        for c in pack:
+          print c
+    else:
+      self.launch_and_bootstrap(self.obj['name'])
+      
+  def launch_and_bootstrap(self, name):
+    if not self.provider.get(name):
       instance = self.provider.launch(self.obj)
       if instance:
         self.provider.bootstrap(instance, self.obj)
     else:
-      print "Instance ({0}) already running".format(self.obj['name'])
+      print "Instance ({0}) already running".format(name)

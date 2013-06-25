@@ -114,6 +114,7 @@ setup(
     author_email='me@ari.io',
     packages=find_packages(),
     url='',
+    scripts=['bin/salt'],
     license='LICENSE.txt',
     description='Salt cli',
     long_description=open('README.md').read(),
@@ -121,6 +122,7 @@ setup(
         "python-novaclient==2.13.0",
         "Fabric==1.6.0",
         "Jinja2==2.7",
-        "pyyaml"
+        "pyyaml",
+        "salt"
     ],
 )
