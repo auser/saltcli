@@ -33,6 +33,13 @@ class Environment(object):
   def get(self, key, default=None):
     print self.config
     self.config.get(key, default)
+    
+  ## Get the master server
+  def master_server(self):
+    for inst in self.instances:
+      if inst.ismaster():
+        return inst
+    return None
   
   ## Load providers
   def load_provider(self):

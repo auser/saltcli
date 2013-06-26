@@ -35,10 +35,12 @@ class Provider(object):
       cmd = "salt-call"
     
     if instance:
+      salt_dir = os.path.join(os.getcwd(), "deploy", "salt/")
+      instance.environment.master_server().upload(salt_dir, "/srv/salt")
       
       def highstate():
-        sudo("{0} mine.update".format(cmd))
-        sudo("{0} state.highstate".format(cmd))
+        sudo("salt-call mine.update".format(cmd))
+        sudo("salt-call state.highstate".format(cmd))
       
       env = build_fabric_env(instance)
       execute(highstate)
