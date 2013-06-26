@@ -90,7 +90,7 @@ class Provider(object):
     
       ## Run bootstrap script
       execute(bootstrap_script)
-      if instance.ismaster():
+      if not instance.ismaster():
         # Don't generate a new saltmaster key
         self.accept_minion_key(instance)
         

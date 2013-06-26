@@ -76,7 +76,7 @@ class Environment(object):
     colors = get_colors()
     hcolor = colors['GREEN']
     # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - {0}%(levelname)s{1[ENDC]} - %(message)s'.format(
+    formatter = logging.Formatter('%(asctime)s - {0}%(levelname)s{1[ENDC]} - %(message)s'.format(
       hcolor, colors
     ))
 

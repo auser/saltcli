@@ -1,6 +1,7 @@
 import os, sys, base64
 import boto
 import time
+from saltcli.utils.utils import get_colors
 from saltcli.providers import Provider, dict_merge
 import collections
 
@@ -17,7 +18,8 @@ class Aws(Provider):
       instances = [instances]
     for name, inst in instances.iteritems():
       if inst.get():
-        inst.environment.info("Not launching {0}. It is already launched.".format(name))
+        colors = get_colors()
+        inst.environment.info("{0}Not launching {1}. It is already launched.{2[ENDC]}".format(colors['RED'], name, colors))
       else:
         instance = self.launch_single_instance(inst)
         self.ssh.wait_for_ssh(instance.ip_address(), instance.ssh_port())
@@ -32,10 +34,11 @@ class Aws(Provider):
                             security_groups=[security_group.name],
                             instance_type=launch_config['flavor'],
                             )
-    instance.environment.debug("Launching...")
+    colors = get_colors()
+    instance.environment.debug("{0}Launching...{1[ENDC]}".format(colors['GREEN'], colors))
     running_instance = reservation.instances[0] #### <~ ew
     # Check up on its status every so often
-    instance.environment.debug("Launched. Waiting for the instance to become available.")
+    instance.environment.debug("{0}Launched. Waiting for the instance to become available.{1[ENDC]}".format(colors['YELLOW'], colors))
     status = running_instance.update()
     while status == 'pending':
         time.sleep(10)
@@ -54,13 +57,16 @@ class Aws(Provider):
   
   def teardown(self, instance):
     """Teardown"""
+    colors = get_colors()
     if instance:
-      instance.environment.debug("Tearing down instance: {0}".format(instance.instance_name))
+      instance.environment.debug("{0}Tearing down instance: {1}{2[ENDC]}".format(
+        colors['GREEN'], instance.instance_name, colors))
       self.conn.terminate_instances([instance.get().id])
       if not instance.ismaster():
         self.remove_minion_key(instance)
     else:
-      print "Could not find instance by name {0}".format(instance.name)
+      instance.environment.debug("{0}Could not find instance by name {1}{2[ENDC]}".format(
+        colors['RED'], instance.name, colors))
       
   def get(self, name):
     if isinstance(name, str):
