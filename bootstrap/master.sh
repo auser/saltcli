@@ -107,7 +107,6 @@ exec salt-minion -d
 """ > /etc/init/salt-minion.conf
 
 sudo restart salt-minion
-sleep 10
 sudo salt-key -a saltmaster
 sudo restart salt-master
 

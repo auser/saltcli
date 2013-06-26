@@ -24,7 +24,7 @@ class Aws(Provider):
     
   ## Launch a single instance
   def launch_single_instance(self, instance):
-    launch_config = self._load_machine_desc(instance.instance_name)
+    launch_config = self._load_machine_desc(instance.name)
     security_group = self._setup_security_group(instance, launch_config)
     
     reservation = self.conn.run_instances(launch_config['image_id'], 
@@ -149,14 +149,14 @@ class Aws(Provider):
           src_group = self.conn.get_all_security_groups([rule.src_group_name,])[0]
  
       if authorize and not revoke:
-          # print "Authorizing missing rule %s..."%(rule,)
+          print "Authorizing missing rule %s..."%(rule,)
           group.authorize(ip_protocol=rule.ip_protocol,
                           from_port=str(rule.from_port),
                           to_port=str(rule.to_port),
                           cidr_ip=rule.cidr_ip,
                           src_group=src_group)
       elif not authorize and revoke:
-          # print "Revoking unexpected rule %s..."%(rule,)
+          print "Revoking unexpected rule %s..."%(rule,)
           group.revoke(ip_protocol=rule.ip_protocol,
                        from_port=str(rule.from_port),
                        to_port=str(rule.to_port),
@@ -186,6 +186,7 @@ class Aws(Provider):
     try:
       machine_config = dict_merge(machines[name], default)
     except Exception, e:
+      print "ECEPTION: {0}".format(e)
       machine_config = default
     
     return machine_config

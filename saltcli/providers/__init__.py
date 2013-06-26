@@ -120,7 +120,7 @@ class Provider(object):
         oldkey = os.path.join(pki_dir, key_dir, instance.instance_name)
         sudo("rm -f {0}".format(oldkey))
         
-      key = os.path.join(pki_dir, 'minions', name)
+      key = os.path.join(pki_dir, 'minions', instance.instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
       

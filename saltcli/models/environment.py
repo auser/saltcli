@@ -1,3 +1,4 @@
+import sys
 import yaml
 import logging
 import importlib
@@ -25,7 +26,7 @@ class Environment(object):
     plan_name = opts.get('plan')
     if plan_name:
       if plan_name in self.config.get('plans', []):
-        self.plan = self.config['plans'][plan_name][0]
+        self.plan = self.config['plans'][plan_name]
         
     self.instances    = {}
     if opts.get('all', False):
