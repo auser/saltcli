@@ -56,6 +56,9 @@ class Instance(object):
   ## IP Address
   def ip_address(self):
     return self.get().ip_address
+    
+  def private_ip_address(self):
+    return self.get().private_ip_address
   
   ## Upload
   def upload(self, local_file, remote_file):

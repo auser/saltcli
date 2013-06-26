@@ -52,4 +52,4 @@ do
   echo "  - ${i}" >> /etc/salt/grains
 done
 
-exit
+restart salt-minion

@@ -66,11 +66,11 @@ class Provider(object):
         instance.upload(salt_dir, "/srv/salt")
         master_server_ip = "127.0.0.1"
       else:
-        master_server_ip = instance.environment.master_server().ip_address()
+        master_server_ip = instance.environment.master_server().private_ip_address()
     
       ## Run bootstrap script
       local_file = get_script(instance)
-      print "Uploading {0}".format(local_file)
+      print "Uploading {0} to {1}".format(local_file, instance.name)
       instance.upload(local_file, "/tmp/")
       index = len(self.all()) + 1
       
