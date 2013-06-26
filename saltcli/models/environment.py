@@ -20,14 +20,17 @@ class Environment(object):
     self.environment  = opts['environment']
     self.ssh = self.provider.ssh
     
-    self.instances    = []
+    self.instances    = {}
     if opts.get('all', False):
       all_instance_names = self.provider.all_names()
     else:
       all_instance_names = opts['name']
     for inst_name in all_instance_names:
-      inst = Instance(inst_name, self)
-      self.instances.append(inst)
+      instance_options = {
+        'roles': opts['roles']
+      }
+      inst = Instance(inst_name, instance_options, self)
+      self.instances[inst_name] = inst
   
   ## Get config
   def get(self, key, default=None):
@@ -37,7 +40,7 @@ class Environment(object):
   def master_server(self):
     for name in self.provider.all_names():
       if name == "master":
-        return Instance(name, self)
+        return Instance(name, {}, self)
     return None
   
   ## Load providers

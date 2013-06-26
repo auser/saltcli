@@ -13,11 +13,11 @@ class Aws(Provider):
     
   ## Public methods
   def launch(self, instances):
-    if not isinstance(instances, list):
+    if not isinstance(instances, dict):
       instances = [instances]
-    for inst in instances:
+    for name, inst in instances.iteritems():
       if inst.get():
-        inst.environment.info("Not launching {0}. It is already launched.".format(inst.name))
+        inst.environment.info("Not launching {0}. It is already launched.".format(name))
       else:
         instance = self.launch_single_instance(inst)
         self.ssh.wait_for_ssh(instance.ip_address(), instance.ssh_port())
@@ -58,7 +58,7 @@ class Aws(Provider):
       instance.environment.debug("Tearing down instance: {0}".format(instance.instance_name))
       self.conn.terminate_instances([instance.get().id])
       if not instance.ismaster():
-        self.remove_minion_key(instance.name)
+        self.remove_minion_key(instance)
     else:
       print "Could not find instance by name {0}".format(instance.name)
       

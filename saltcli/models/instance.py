@@ -1,9 +1,11 @@
 class Instance(object):
-  def __init__(self, name, environment):
+  def __init__(self, name, instance_options, environment):
     super(Instance, self).__init__()
     self.name = name
     self.environment = environment
     self.instance_name = "{0}-{1}".format(self.environment.environment, self.name)
+    self.instance_options = instance_options
+    self.roles = instance_options.get('roles', [])
     
   ## Get this instance
   def get(self):
@@ -21,13 +23,6 @@ class Instance(object):
   
   def ssh_port(self):
     return self.environment.provider.config.get('port', 22)
-    
-  ## Roles
-  def roles(self):
-    roles = self.environment.opts.get('roles', [])
-    if self.ismaster():
-      roles.append('master')
-    return roles
     
   ## Open an ssh shell
   def open_ssh_shell(self):

@@ -8,7 +8,8 @@ class Ssh(Command):
     
   def run(self):
     """ssh"""
-    inst = self.environment.instances[0] ### Can only ssh into one machine at a time
+    name = self.environment.opts.get('name')[0]
+    inst = self.environment.instances[name] ### Can only ssh into one machine at a time
     if inst.get() != None:
       inst.open_ssh_shell()
     else:
