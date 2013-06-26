@@ -1,7 +1,11 @@
 #!/bin/bash -e
+# sudo("/tmp/{script} {inst_name} {master_server} {env} {index} {rs}".format(
 
-LOC=${1:-vagrant}
-ENV=${2:-development}
+HOSTNAME=${1:-master}
+SALT_MASTER=${2:-127.0.0.1}
+ENV=${3:-development}
+INDEX=${4:-1}
+ROLES=${5:-master}
 
 echo "------> Bootstrapping master for environment $ENV"
 
@@ -106,12 +110,9 @@ respawn limit 5 20
 exec salt-minion -d
 """ > /etc/init/salt-minion.conf
 
-## START the saltmaster
-sudo restart salt-master
-sleep 5
 sudo restart salt-minion
-sleep 15
+salt-call grains.items 2&>1 > /dev/null
+
 sudo salt-key -a saltmaster
-sudo salt-key -a `hostname`
 
 sudo restart salt-master

@@ -1,8 +1,10 @@
 from saltcli.commands import Command
 
 class Highstate(Command):
-  def __init__(self, provider, args, config, obj):
-    super(Highstate, self).__init__(provider, args, config, obj)
+  def __init__(self, environment):
+    super(Highstate, self).__init__(environment)
     
   def run(self):
-    self.provider.highstate(self.obj)
+    # for name, inst in self.environment.instances.iteritems():
+    #   inst.highstate()
+    self.environment.provider.highstate(self.environment.instances)

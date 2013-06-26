@@ -1,24 +1,21 @@
 from saltcli.commands import Command
-from saltcli.lib.utils import query_yes_no
+from saltcli.utils.cli import query_yes_no
 
 class Teardown(Command):
   """docstring for Teardown"""
-  def __init__(self, provider, args, config, obj):
-    super(Teardown, self).__init__(provider, args, config, obj)
+  def __init__(self, environment):
+    super(Teardown, self).__init__(environment)
     
   def run(self):
-    """Teardown"""
-    name = self.obj['name']
-    if self.obj['all']:
-      for inst in self.provider.list_instances():
-        if inst.tags['name'] != "master":
-          self.provider.teardown(inst)
-      self.provider.teardown("{0}-{1}".format(self.obj['environment'], "master"))
-    else:
-      if self.provider.get(name):
-        if self.obj.get('answer_yes', False) or query_yes_no("Are you sure you want to tear down the {0} instance?".format(name)):
-          self.provider.teardown(self.obj['name'])
+    # This could be more efficient by sorting the master server to the end
+    # but it works for now
+    for name, inst in self.environment.instances.iteritems():
+      if not inst.ismaster() and inst.get() != None:
+        if self.environment.opts.get('answer_yes', False) or query_yes_no("Are you sure you want to teardown {0}?".format(inst.name)):
+          inst.teardown()
         else:
-          print "Aborting"
-      else:
-        print "No instance {0} was found, therefore it would be difficult to shut it down, wouldn't you agree?".format(name)
+          print "Aborting..."
+    inst = self.environment.master_server()
+    if inst:
+      if self.environment.opts.get('answer_yes', False) or query_yes_no("Are you sure you want to teardown {0}?".format(inst.name)):
+        inst.teardown()

@@ -2,6 +2,13 @@ from fabric.api import run, env, put, local, sudo
 from subprocess import call
 from fabric.tasks import execute
 from fabric.operations import open_shell
+from saltcli.utils.utils import build_fabric_env
+
+import time
+import logging
+import socket
+
+log = logging.getLogger(__name__)
 
 class Ssh(object):
   """docstring for Ssh"""
@@ -9,20 +16,22 @@ class Ssh(object):
     super(Ssh, self).__init__()
     self.config = config
 
-  def open_shell(self, inst, obj={}):
+  def open_shell(self, inst):
     env = self._env(inst)
     cmd = 'ssh {user}@{host} {opts}'.format(
       user = env.user,
       host = env.hosts[0],
       opts=self._ssh_opts_str(env),
     )
-    print "Running: {0}".format(cmd)
+    inst.environment.debug("Running shell: {0}".format(cmd))
     call(cmd, shell=True)
     
   def run_command(self, inst, cmd, obj={}):
     env = self._env(inst)
     def _run_command():
       run("{0}".format(cmd))
+      
+    print "hosts: {0}".format(env)
     execute(_run_command, hosts=env.hosts)
     
   def sudo_command(self, inst, cmd, obj={}):
@@ -30,13 +39,10 @@ class Ssh(object):
     def _run_command():
       sudo("{0}".format(cmd))
     execute(_run_command, hosts=env.hosts)
-    
-  def upload(self, inst, local_file, remote_file='/srv/salt', obj={}):
-    env = self._env(inst)
-    if isinstance(local_file, list):
-      local_file = local_file[0]
-    if isinstance(remote_file, list):
-      remote_file = remote_file[0]
+
+  ## Upload a file
+  def upload(self, instance, local_file, remote_file='/srv/salt'):
+    env = self._env(instance)
     cmd = "{rsync} {local} {user}@{host}:{remote}".format(
       rsync=self._rsync_opts(env),
       user=env.user,
@@ -49,7 +55,7 @@ class Ssh(object):
       sudo("mkdir -p {remote}".format(remote=remote_file))
       sudo("chown -R {user}:{user} {remote}".format(user=env.user, remote=remote_file))
 
-    execute(prepare_upload, hosts=env.hosts)
+    execute(prepare_upload)
     
     print "Running: {0}".format(cmd)
     call(cmd, shell=True)
@@ -77,19 +83,15 @@ class Ssh(object):
       '-e "ssh {0}"'.format(self._ssh_opts_str(env)),
     ])
     
-  def _env(self, inst):
-    env.hosts = [inst.ip_address]
-    env.key_filename = self.config['key_file']
-    env.user = self.config.get('ssh_username', 'root')
-    env.port = self.config.get('ssh_port', 22)
-    return env
+  def _env(self, insts):
+    return build_fabric_env(insts, self.config)
     
   def _execute(self, cmd, **kwargs):
     print "cmd: {0} {1}".format(cmd, kwargs)
     execute(cmd, **kwargs)
     
   ## Salt cloud
-  def wait_for_ssh(host, port=22, timeout=900):
+  def wait_for_ssh(self, host, port=22, timeout=900):
       '''
       Wait until an ssh connection can be made on a specified host
       '''
