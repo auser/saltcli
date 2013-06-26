@@ -52,4 +52,6 @@ do
   echo "  - ${i}" >> /etc/salt/grains
 done
 
+salt-call grains.items 2&>1 > /dev/null
+
 restart salt-minion

@@ -111,8 +111,8 @@ exec salt-minion -d
 """ > /etc/init/salt-minion.conf
 
 sudo restart salt-minion
-sleep 15
+salt-call grains.items 2&>1 > /dev/null
+
 sudo salt-key -a saltmaster
-sudo salt-key -a `hostname`
 
 sudo restart salt-master
