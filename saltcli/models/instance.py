@@ -40,6 +40,10 @@ class Instance(object):
   ## Teardown this instance
   def teardown(self):
     self.environment.provider.teardown(self)
+    
+  ## Highstate this instance
+  def highstate(self):
+    self.environment.provider.highstate(self)
   
   ## Is this the master instance?
   def ismaster(self):

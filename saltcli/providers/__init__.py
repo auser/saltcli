@@ -3,6 +3,7 @@ from fabric.api import sudo, put, run
 from fabric.tasks import execute
 from saltcli.utils.ssh import Ssh
 from saltcli.utils import utils
+from saltcli.utils.utils import build_fabric_env
 import os, sys, time
 import importlib
 
@@ -26,20 +27,21 @@ class Provider(object):
   def all(self):
     pass
     
-  def highstate(self, conf={}):
-    name = conf.get('instance_name', "master")
+  def highstate(self, instance):
+    name = instance.name
     if name == "master":
       cmd = "salt *"
-      inst = self._master_server()
     else:
       cmd = "salt-call"
-      inst = self.get(name)
     
-    if inst:
-      hosts = [inst.ip_address]
-    
-      self.ssh.sudo_command(inst, "{0} mine.update".format(cmd))
-      self.ssh.sudo_command(inst, "{0} state.highstate".format(cmd))
+    if instance:
+      
+      def highstate():
+        sudo("{0} mine.update".format(cmd))
+        sudo("{0} state.highstate".format(cmd))
+      
+      env = build_fabric_env(instance)
+      execute(highstate)
     else:
       print "There was an error finding the instance you're referring to by name: {0}".format(name)
     
