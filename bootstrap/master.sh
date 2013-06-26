@@ -110,3 +110,5 @@ sudo restart salt-minion
 sleep 10
 sudo salt-key -a saltmaster
 sudo restart salt-master
+
+exit

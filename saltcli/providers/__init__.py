@@ -126,17 +126,18 @@ class Provider(object):
       
     env = build_fabric_env(instance)
     execute(_create)
-    env = build_fabric_env(self.environment.master_server())
+    env = build_fabric_env(instance.environment.master_server())
     execute(_accept)
     
   def remove_minion_key(self, instance):
-    def _remove_minion_key():
-      pki_dir = "/etc/salt/pki/master"
-      key = os.path.join(pki_dir, 'minions', instance.instance_name)
-      sudo("rm -f {0}".format(key))
-      
-    env = build_fabric_env(self.environment.master_server())
-    execute(_remove_minion_key)
+    if instance.environment.master_server():
+      def _remove_minion_key():
+        pki_dir = "/etc/salt/pki/master"
+        key = os.path.join(pki_dir, 'minions', instance.instance_name)
+        sudo("rm -f {0}".format(key))
+    
+      env = build_fabric_env(instance.environment.master_server())
+      execute(_remove_minion_key)
   
   def upload(self, inst, args):
     if len(args) == 0:

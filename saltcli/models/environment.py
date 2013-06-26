@@ -20,15 +20,25 @@ class Environment(object):
     self.environment  = opts['environment']
     self.ssh = self.provider.ssh
     
+    ## PLANS
+    self.plan = None
+    plan_name = opts.get('plan')
+    if plan_name:
+      if plan_name in self.config.get('plans', []):
+        self.plan = self.config['plans'][plan_name][0]
+        
     self.instances    = {}
     if opts.get('all', False):
       all_instance_names = self.provider.all_names()
     else:
       all_instance_names = opts['name']
     for inst_name in all_instance_names:
-      instance_options = {
-        'roles': opts['roles']
-      }
+      if not self.plan is None: 
+        instance_options = self.plan.get(inst_name)
+      else:
+        instance_options = {
+          'roles': opts['roles']
+        }
       inst = Instance(inst_name, instance_options, self)
       self.instances[inst_name] = inst
   
