@@ -1,7 +1,11 @@
 #!/bin/bash -e
+# sudo("/tmp/{script} {inst_name} {master_server} {env} {index} {rs}".format(
 
-LOC=${1:-vagrant}
-ENV=${2:-development}
+HOSTNAME=${1:-master}
+SALT_MASTER=${2:-127.0.0.1}
+ENV=${3:-development}
+INDEX=${4:-1}
+ROLES=${5:-master}
 
 echo "------> Bootstrapping master for environment $ENV"
 
