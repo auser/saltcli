@@ -66,7 +66,7 @@ class Provider(object):
         instance.upload(salt_dir, "/srv/salt")
         master_server_ip = "127.0.0.1"
       else:
-        master_server_ip = instance.environment.master_server().ip_address
+        master_server_ip = instance.environment.master_server().ip_address()
     
       ## Run bootstrap script
       local_file = get_script(instance)
@@ -134,7 +134,8 @@ class Provider(object):
       key = os.path.join(pki_dir, 'minions', name)
       sudo("rm -f {0}".format(key))
       
-    self.ssh.execute(self._master_server(), _remove_minion_key)
+    env = build_fabric_env(self.environment.master_server())
+    execute(_remove_minion_key)
   
   def upload(self, inst, args):
     if len(args) == 0:

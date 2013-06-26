@@ -44,6 +44,10 @@ class Instance(object):
   ## Highstate this instance
   def highstate(self):
     self.environment.provider.highstate(self)
+    
+  ## Bootstrap this instance
+  def bootstrap(self):
+    self.environment.provider.bootstrap([self])
   
   ## Is this the master instance?
   def ismaster(self):

@@ -35,9 +35,9 @@ class Environment(object):
     
   ## Get the master server
   def master_server(self):
-    for inst in self.instances:
-      if inst.ismaster():
-        return inst
+    for name in self.provider.all_names():
+      if name == "master":
+        return Instance(name, self)
     return None
   
   ## Load providers

@@ -47,8 +47,9 @@ index: $INDEX
 roles:
 """ > /etc/salt/grains
 
-for i in $(echo $ROLES | tr "," "\n")
+for i in $(echo "$ROLES" | tr "," "\n")
 do
   echo "  - ${i}" >> /etc/salt/grains
 done
 
+exit
