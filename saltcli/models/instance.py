@@ -7,15 +7,24 @@ class Instance(object):
     
   ## Get this instance
   def get(self):
-    self.environment.provider.get(self.instance_name)
+    return self.environment.provider.get(self.instance_name)
     
   ## Keyname
   def keyname(self):
     return self.environment.provider.config.get('keyname', None)
     
+  def key_filename(self):
+    return self.environment.provider.config.get('key_filename', None)
+    
+  def ssh_username(self):
+    return self.environment.provider.config.get('ssh_username', 'root')
+  
+  def ssh_port(self):
+    return self.environment.provider.config.get('port', 22)
+    
   ## Launch this instance
   def launch(self):
-    print 'launch'
+    self.environment.provider.launch([self])
     
   ## Teardown this instance
   def teardown(self):
@@ -27,4 +36,8 @@ class Instance(object):
   
   ## IP Address
   def ip_address(self):
-    self.get().ip_address
+    return self.get().ip_address
+  
+  ## Upload
+  def upload(self, local_file, remote_file):
+    self.environment.ssh.upload(self, local_file, remote_file)

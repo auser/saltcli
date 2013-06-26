@@ -27,7 +27,7 @@ class Provider(object):
     pass
     
   def highstate(self, conf={}):
-    name = conf.get('original_name', "master")
+    name = conf.get('instance_name', "master")
     if name == "master":
       cmd = "salt *"
       inst = self._master_server()
@@ -44,27 +44,31 @@ class Provider(object):
       print "There was an error finding the instance you're referring to by name: {0}".format(name)
     
   ## PRIVATE
-  def bootstrap(self, inst, conf={}):
-    name = conf['name']
-    # local_file
-    this_dir = os.path.dirname(os.path.realpath(__file__))
-    c = conf.get('bootstrap', {
-      'master': os.path.join(this_dir, "..", "..", "bootstrap", "master.sh"),
-      'minion': os.path.join(this_dir, "..", "..", "bootstrap", "minion.sh"),
-    })
-    ## Upload script
-    if conf.get('original_name', 'master') == "master":
-      script_name = "master.sh"
-      local_file = c['master']
-      self.upload(self._master_server(), [])
-    else:
-      script_name = "minion.sh"
-      local_file = c['minion']
+  def bootstrap(self, instances):
     
-    ## Run bootstrap script
-    print "Uploading {0}".format(local_file)
-    self.ssh.upload(inst, local_file, "/srv/salt/")
-    index = len(self.all()) + 1
+    def _upload_bootstrap_script(instance):
+      # local_file
+      this_dir = os.path.dirname(os.path.realpath(__file__))
+      c = {
+        'master': os.path.join(this_dir, "..", "..", "bootstrap", "master.sh"),
+        'minion': os.path.join(this_dir, "..", "..", "bootstrap", "minion.sh"),
+      }
+    
+      ## Upload script
+      if instance.ismaster():
+        script_name = "master.sh"
+        local_file = c['master']
+        instance.upload(self._master_server(), [])
+      else:
+        script_name = "minion.sh"
+        local_file = c['minion']
+    
+      ## Run bootstrap script
+      print "Uploading {0}".format(local_file)
+      instance.upload(local_file, "/srv/salt/")
+      index = len(self.all()) + 1
+    
+    [_upload_bootstrap_script(inst) for inst in instances]
     
     def bootstrap_script():
       # cmd = "sudo /bin/sh #{remotepath} #{provider.to_s} #{name} #{master_server.preferred_ip} #{environment} #{index} #{rs}"
@@ -83,7 +87,7 @@ class Provider(object):
     execute(bootstrap_script, hosts=[inst.ip_address])
     
     # Don't generate a new saltmaster key
-    if conf.get('original_name', 'master') != 'master':
+    if conf.get('instance_name', 'master') != 'master':
       self.accept_minion_key(inst, name)
   
   ## Accept the minion key
@@ -135,7 +139,7 @@ class Provider(object):
     
   def _master_server(self):
     for inst in self.all():
-      if inst.tags['original_name'] == "master":
+      if inst.tags['instance_name'] == "master":
         return inst
     return None
     

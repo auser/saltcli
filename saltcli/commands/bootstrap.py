@@ -12,9 +12,9 @@ class Bootstrap(Command):
     if self.obj['all']:
       for inst in self.provider.all():
         conf = self.obj.copy()
-        name, original_name = inst.tags['name'], inst.tags['original_name']
-        if original_name != "master":
-          conf['original_name'] = original_name
+        name, instance_name = inst.tags['name'], inst.tags['instance_name']
+        if instance_name != "master":
+          conf['instance_name'] = instance_name
           conf['name'] = name
           self.provider.bootstrap(inst, conf)
     else:

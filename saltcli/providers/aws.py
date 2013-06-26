@@ -16,9 +16,11 @@ class Aws(Provider):
     if not isinstance(instances, list):
       instances = [instances]
     for inst in instances:
-      print inst.get()
-      # instance = self.launch_single_instance(inst)
-      # salt_dir = os.path.join(os.getcwd(), "deploy", "salt")
+      if inst.get():
+        inst.environment.info("Not launching {0}. It is already launched.".format(inst.name))
+      else:
+        instance = self.launch_single_instance(inst)
+      salt_dir = os.path.join(os.getcwd(), "deploy", "salt")
     
   ## Launch a single instance
   def launch_single_instance(self, instance):
@@ -33,28 +35,27 @@ class Aws(Provider):
     instance.environment.debug("Launching...")
     running_instance = reservation.instances[0] #### <~ ew
     # Check up on its status every so often
+    instance.environment.debug("Launched. Waiting for the instance to become available.")
     status = running_instance.update()
     while status == 'pending':
         time.sleep(5)
-        sys.stdout.write('.')
-        sys.stdout.flush()
         status = running_instance.update()
     instance.environment.info("Instance {0} launched at {1}".format(running_instance.id, running_instance.ip_address))
     
     if status == 'running':
       running_instance.add_tag("name", instance.name)
-      running_instance.add_tag('original_name', instance.instance_name)
+      running_instance.add_tag('instance_name', instance.instance_name)
       running_instance.add_tag('environment', instance.environment.environment)
     else:
       print "Instance status: {0}".format(status)
       
     return instance
       
+  
   def teardown(self, instance):
     """Teardown"""
     if instance:
       instance.environment.debug("Tearing down instance: {0}".format(instance.name))
-      print instance.get()
       self.conn.terminate_instances([instance.get()])
       if not instance.ismaster():
         self.remove_minion_key(name)
@@ -71,7 +72,7 @@ class Aws(Provider):
       
   def _get_by_name(self, name):
     for inst in self.all():
-      if name == inst.tags.get('name', None):
+      if name == inst.tags.get('instance_name', None):
         return inst
     return None
     

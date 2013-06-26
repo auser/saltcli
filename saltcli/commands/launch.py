@@ -15,17 +15,12 @@ class Launch(Command):
     #         conf = self.obj.copy()
     #         if opts['roles']:
     #           conf['roles'] = opts['roles']
-    #         conf['original_name'] = name
+    #         conf['instance_name'] = name
     #         conf['name'] = conf['environment'] + "-" + name
     #         self.launch_and_bootstrap(conf['name'], conf)
     self.launch_and_bootstrap()
     # self.provider.highstate(self.obj)
       
   def launch_and_bootstrap(self):
-    print self.provider.launch(self.environment.instances)
-    # if not self.provider.get(name):
-#       instance = self.provider.launch(conf)
-#       if instance:
-#         self.provider.bootstrap(instance, conf)
-#     else:
-#       print "Instance ({0}) already running".format(name)
+    self.provider.launch(self.environment.instances)
+    self.provider.bootstrap(self.environment.instances)

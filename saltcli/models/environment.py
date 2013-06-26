@@ -2,6 +2,7 @@ import yaml
 import logging
 import importlib
 
+from saltcli.utils.ssh import Ssh
 from saltcli.models.instance import Instance
 
 class Environment(object):
@@ -17,6 +18,7 @@ class Environment(object):
     self.load_provider()
     ## Setup naming
     self.environment  = opts['environment']
+    self.ssh = Ssh(self.config)
     
     self.instances    = []
     if opts.get('all', False):

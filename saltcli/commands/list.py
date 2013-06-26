@@ -14,5 +14,5 @@ class List(Command):
   ip_address: {ip}
   environment: {environment}""".format( id=inst.id, 
                   ip=inst.ip_address, 
-                  name=inst.tags.get('original_name', None), 
+                  name=inst.tags.get('instance_name', None), 
                   environment=inst.tags.get('environment', None))

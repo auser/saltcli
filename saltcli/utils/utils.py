@@ -5,13 +5,13 @@ import tempfile
 import salt.crypt
 
 def build_fabric_env(insts, config={}):
-    if not isinstance(insts, list):
-      insts = [insts]
-    env.hosts         = [inst.ip_address for inst in insts if inst != None]
-    env.key_filename  = config['key_file']
-    env.user          = config.get('ssh_username', 'root')
-    env.port          = config.get('ssh_port', 22)
-    return env
+  if not isinstance(insts, list):
+    insts = [insts]
+  env.hosts         = [inst.ip_address() for inst in insts if inst != None]
+  env.key_filename  = inst.key_filename()
+  env.user          = inst.ssh_username()
+  env.port          = inst.ssh_port()
+  return env
 
 def gen_keys(keysize=2048):
     '''
