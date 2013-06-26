@@ -8,13 +8,15 @@ import time
 import logging
 import socket
 
+log = logging.getLogger(__name__)
+
 class Ssh(object):
   """docstring for Ssh"""
   def __init__(self, config):
     super(Ssh, self).__init__()
     self.config = config
 
-  def open_shell(self, inst, obj={}):
+  def open_shell(self, inst):
     env = self._env(inst)
     cmd = 'ssh {user}@{host} {opts}'.format(
       user = env.user,

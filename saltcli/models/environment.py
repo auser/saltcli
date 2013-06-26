@@ -18,11 +18,11 @@ class Environment(object):
     self.load_provider()
     ## Setup naming
     self.environment  = opts['environment']
-    self.ssh = Ssh(self.config)
+    self.ssh = self.provider.ssh
     
     self.instances    = []
     if opts.get('all', False):
-      all_instance_names = self.provider.all()
+      all_instance_names = self.provider.all_names()
     else:
       all_instance_names = opts['name']
     for inst_name in all_instance_names:

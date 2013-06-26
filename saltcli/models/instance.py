@@ -14,13 +14,24 @@ class Instance(object):
     return self.environment.provider.config.get('keyname', None)
     
   def key_filename(self):
-    return self.environment.provider.config.get('key_filename', None)
+    return self.environment.provider.config.get('key_file', None)
     
   def ssh_username(self):
     return self.environment.provider.config.get('ssh_username', 'root')
   
   def ssh_port(self):
     return self.environment.provider.config.get('port', 22)
+    
+  ## Roles
+  def roles(self):
+    roles = self.environment.opts.get('roles', [])
+    if self.ismaster():
+      roles.append('master')
+    return roles
+    
+  ## Open an ssh shell
+  def open_ssh_shell(self):
+    self.environment.ssh.open_shell(self)
     
   ## Launch this instance
   def launch(self):

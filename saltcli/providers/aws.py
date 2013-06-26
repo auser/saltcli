@@ -20,7 +20,7 @@ class Aws(Provider):
         inst.environment.info("Not launching {0}. It is already launched.".format(inst.name))
       else:
         instance = self.launch_single_instance(inst)
-      salt_dir = os.path.join(os.getcwd(), "deploy", "salt")
+        self.ssh.wait_for_ssh(instance.ip_address(), instance.ssh_port())
     
   ## Launch a single instance
   def launch_single_instance(self, instance):
@@ -38,7 +38,7 @@ class Aws(Provider):
     instance.environment.debug("Launched. Waiting for the instance to become available.")
     status = running_instance.update()
     while status == 'pending':
-        time.sleep(5)
+        time.sleep(10)
         status = running_instance.update()
     instance.environment.info("Instance {0} launched at {1}".format(running_instance.id, running_instance.ip_address))
     
@@ -55,8 +55,8 @@ class Aws(Provider):
   def teardown(self, instance):
     """Teardown"""
     if instance:
-      instance.environment.debug("Tearing down instance: {0}".format(instance.name))
-      self.conn.terminate_instances([instance.get()])
+      instance.environment.debug("Tearing down instance: {0}".format(instance.instance_name))
+      self.conn.terminate_instances([instance.get().id])
       if not instance.ismaster():
         self.remove_minion_key(name)
     else:
@@ -85,6 +85,12 @@ class Aws(Provider):
         if inst.update() == 'running':
           running_instances.append(inst)
     return running_instances
+    
+  def all_names(self):
+    running_instance_names = []
+    for i in self.all():
+      running_instance_names.append(i.tags['name'])
+    return running_instance_names
     
   def _get_user_data(self, name):
     this_dir = os.path.dirname(os.path.realpath(__file__))

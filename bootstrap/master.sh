@@ -106,9 +106,6 @@ respawn limit 5 20
 exec salt-minion -d
 """ > /etc/init/salt-minion.conf
 
-## START the saltmaster
-sudo restart salt-master
-sleep 5
 sudo restart salt-minion
 sleep 15
 sudo salt-key -a saltmaster
