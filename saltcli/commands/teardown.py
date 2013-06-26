@@ -13,8 +13,9 @@ class Teardown(Command):
       if not inst.ismaster() and inst.get() != None:
         if self.environment.opts.get('answer_yes', False) or query_yes_no("Are you sure you want to teardown {0}?".format(inst.name)):
           inst.teardown()
-          inst.pop()
         else:
           print "Aborting..."
+    inst = self.environment.master_server()
+    if inst:
       if self.environment.opts.get('answer_yes', False) or query_yes_no("Are you sure you want to teardown {0}?".format(inst.name)):
-        self.environment.master_server().teardown()
+        inst.teardown()

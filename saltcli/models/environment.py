@@ -3,6 +3,7 @@ import yaml
 import logging
 import importlib
 
+from saltcli.utils.utils import get_colors
 from saltcli.utils.ssh import Ssh
 from saltcli.models.instance import Instance
 
@@ -72,8 +73,12 @@ class Environment(object):
     ch = logging.StreamHandler()
     ch.setLevel(logging.DEBUG)
     
+    colors = get_colors()
+    hcolor = colors['GREEN']
     # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - {0}%(levelname)s{1[ENDC]} - %(message)s'.format(
+      hcolor, colors
+    ))
 
     # add formatter to ch
     ch.setFormatter(formatter)

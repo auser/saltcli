@@ -7,7 +7,6 @@ def run(working_opts):
   environment = Environment(working_opts)
   
   command = get_command(working_opts['command'])
-  environment.debug("Command:")
   command(environment)
 
 def _load_config(conf_file):

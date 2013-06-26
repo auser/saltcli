@@ -5,5 +5,5 @@ class Highstate(Command):
     super(Highstate, self).__init__(environment)
     
   def run(self):
-    for inst in self.environment.instances:
+    for name, inst in self.environment.instances.iteritems():
       inst.highstate()
