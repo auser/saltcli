@@ -84,33 +84,11 @@ class Provider(object):
     self.accept_minion_key(inst, name)
   
   ## Accept the minion key
-  def accept_minion_key(self, inst, name):
-    priv, pub = utils.gen_keys()
-    
-    def _create():
-      pki_dir = "/etc/salt/pki/minion/"
-      priv_key = os.path.join(pki_dir, "minion.pem")
-      put(StringIO.StringIO(priv), priv_key, use_sudo=True, mode=0600)
-      pub_key = os.path.join(pki_dir, "minion.pub")
-      put(StringIO.StringIO(pub), pub_key, use_sudo=True, mode=0600)
+  def accept_minion_key(self, inst, name):      
+    def _accept_minion_key(**kwargs):  
+      sudo("salt-key -a {0}".format(name))
       
-    def _accept(**kwargs):  
-      pki_dir = "/etc/salt/pki/master"
-      for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
-          key_path = os.path.join(pki_dir, key_dir)
-          sudo("mkdir -p {0}".format(key_path))
-          
-      for key_dir in ('minions_pre', 'minions_rejected'):
-        oldkey = os.path.join(pki_dir, key_dir, name)
-        sudo("rm -f {0}".format(oldkey))
-        
-      key = os.path.join(pki_dir, 'minions', name)
-      put(StringIO.StringIO(pub), key, use_sudo=True)
-      sudo("chown root:root {0}".format(key))
-      
-    
-    self.ssh.execute(inst, _create)
-    self.ssh.execute(self._master_server(), _accept)
+    self.ssh.execute(self._master_server(), _accept_minion_key)
     
   def remove_minion_key(self, name):
     def _remove():

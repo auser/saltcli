@@ -114,8 +114,8 @@ class Aws(Provider):
             rule = SecurityGroupRule(str(proto), str(port), str(port), str(cidr), None)
             expected_rules.append(rule)
     
-    for g in self.conn.get_all_security_groups():
-      expected_rules.append(SecurityGroupRule('tcp', 22, 65535, '0.0.0.0/0', g.name))
+    # for g in self.conn.get_all_security_groups():
+      # expected_rules.append(SecurityGroupRule('tcp', 22, 65535, '0.0.0.0/0', g.name))
     
     current_rules = []
     for rule in group.rules:
