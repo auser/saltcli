@@ -58,7 +58,7 @@ class Aws(Provider):
       instance.environment.debug("Tearing down instance: {0}".format(instance.instance_name))
       self.conn.terminate_instances([instance.get().id])
       if not instance.ismaster():
-        self.remove_minion_key(name)
+        self.remove_minion_key(instance.name)
     else:
       print "Could not find instance by name {0}".format(instance.name)
       

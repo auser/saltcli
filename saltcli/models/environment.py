@@ -31,7 +31,6 @@ class Environment(object):
   
   ## Get config
   def get(self, key, default=None):
-    print self.config
     self.config.get(key, default)
     
   ## Get the master server

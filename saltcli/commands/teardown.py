@@ -10,12 +10,9 @@ class Teardown(Command):
     # This could be more efficient by sorting the master server to the end
     # but it works for now
     for inst in self.environment.instances:
-      if not inst.ismaster():
+      if not inst.ismaster() and inst.get() != None:
         if self.environment.get('answer_yes', False) or query_yes_no("Are you sure you want to teardown {0}?".format(inst.name)):
           inst.teardown()
           inst.pop()
         else:
           print "Aborting..."
-      if self.environment.get('answer_yes', False) or query_yes_no("Are you sure you want to teardown {0}?".format(self.environment.instances[0].name)):
-        self.environment.instances[0].teardown()
-        
