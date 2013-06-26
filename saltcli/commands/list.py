@@ -1,4 +1,5 @@
 from saltcli.commands import Command
+from saltcli.utils.utils import get_colors
 
 class List(Command):
   """docstring for Launch"""
@@ -18,4 +19,7 @@ class List(Command):
                     name=inst.tags.get('instance_name', None), 
                     environment=inst.tags.get('environment', None))
     else:
-      print "No instances found. You have an empty cluster, my friend. Try launching one..."
+      colors = get_colors()
+      self.environment.debug("{0}No instances found. You have an empty cluster, my friend. Try launching one...{1[ENDC]}".format(
+        colors['RED'], colors
+      ))
