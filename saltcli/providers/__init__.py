@@ -117,7 +117,7 @@ class Provider(object):
           sudo("mkdir -p {0}".format(key_path))
           
       for key_dir in ('minions_pre', 'minions_rejected'):
-        oldkey = os.path.join(pki_dir, key_dir, name)
+        oldkey = os.path.join(pki_dir, key_dir, instance.instance_name)
         sudo("rm -f {0}".format(oldkey))
         
       key = os.path.join(pki_dir, 'minions', name)

@@ -18,4 +18,4 @@ class List(Command):
                     name=inst.tags.get('instance_name', None), 
                     environment=inst.tags.get('environment', None))
     else:
-      print "No instances found"
+      print "No instances found. You have an empty cluster, my friend. Try launching one..."

@@ -6,8 +6,6 @@ class Instance(object):
     self.instance_name = "{0}-{1}".format(self.environment.environment, self.name)
     self.instance_options = instance_options
     self.roles = instance_options.get('roles', [])
-    if name == "master":
-      self.roles.append('master')
     
   ## Get this instance
   def get(self):
