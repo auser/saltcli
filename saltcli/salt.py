@@ -1,15 +1,14 @@
 import sys
-from lib.config import Config
-from commands import get_method
+from saltcli.models.environment import Environment
+from saltcli.utils.cli import get_command
 
-def run(args, obj):
+def run(working_opts):
   """Kick off"""
-  conf = _load_config(obj['config'])
-  provider = obj['provider']
-  # meth = getattr(commands, obj['command'])
-  meth = get_method(obj['command'])
-  meth(provider, args, conf, obj)
-  # launch()
+  environment = Environment(working_opts)
+  
+  command = get_command(working_opts['command'])
+  environment.debug("Command:")
+  command(environment)
 
 def _load_config(conf_file):
   return Config(conf_file)

@@ -12,77 +12,70 @@ class Aws(Provider):
     self._load_connection()
     
   ## Public methods
-  def launch(self, conf={}):
-    instance = self.launch_single_instance(conf)
-    salt_dir = os.path.join(os.getcwd(), "deploy", "salt")
-    retry = True
-    while retry:
-      try:
-        self.ssh.run_command(instance, "echo 'trying to connect...'", conf)
-        retry = False
-      except:
-        time.sleep(10)
-    return instance
+  def launch(self, instances):
+    if not isinstance(instances, list):
+      instances = [instances]
+    for inst in instances:
+      print inst.get()
+      # instance = self.launch_single_instance(inst)
+      # salt_dir = os.path.join(os.getcwd(), "deploy", "salt")
     
   ## Launch a single instance
-  def launch_single_instance(self, conf):
-    launch_config = self._load_machine_desc(conf['original_name'])
-    security_group = self._setup_security_group(conf, launch_config)
+  def launch_single_instance(self, instance):
+    launch_config = self._load_machine_desc(instance.instance_name)
+    security_group = self._setup_security_group(instance, launch_config)
     
     reservation = self.conn.run_instances(launch_config['image_id'], 
-                            key_name=self.config['keyname'],
+                            key_name=instance.keyname(),
                             security_groups=[security_group.name],
                             instance_type=launch_config['flavor'],
                             )
-    sys.stdout.write("Launching...")
-    instance = reservation.instances[0] #### <~ ew
+    instance.environment.debug("Launching...")
+    running_instance = reservation.instances[0] #### <~ ew
     # Check up on its status every so often
-    status = instance.update()
+    status = running_instance.update()
     while status == 'pending':
         time.sleep(5)
         sys.stdout.write('.')
         sys.stdout.flush()
-        status = instance.update()
-    print "Instance {0} launched at {1}".format(instance.id, instance.ip_address)
+        status = running_instance.update()
+    instance.environment.info("Instance {0} launched at {1}".format(running_instance.id, running_instance.ip_address))
     
     if status == 'running':
-      instance.add_tag("name", conf['name'])
-      instance.add_tag('original_name', conf['original_name'])
-      instance.add_tag('environment', conf['environment'])
+      running_instance.add_tag("name", instance.name)
+      running_instance.add_tag('original_name', instance.instance_name)
+      running_instance.add_tag('environment', instance.environment.environment)
     else:
       print "Instance status: {0}".format(status)
       
     return instance
       
-  def teardown(self, name):
+  def teardown(self, instance):
     """Teardown"""
-    if isinstance(name, boto.ec2.instance.Instance):
-      inst = name
-      name = inst.tags['name']
+    if instance:
+      instance.environment.debug("Tearing down instance: {0}".format(instance.name))
+      print instance.get()
+      self.conn.terminate_instances([instance.get()])
+      if not instance.ismaster():
+        self.remove_minion_key(name)
     else:
-      inst = self.get(name)
-    if inst:
-      print "Tearing down instance: {0}".format(name)
-      self.conn.terminate_instances([inst.id])
-      self.remove_minion_key(name)
-    else:
-      print "Could not find instance by name {0}".format(name)
+      print "Could not find instance by name {0}".format(instance.name)
       
   def get(self, name):
     if isinstance(name, str):
       return self._get_by_name(name)
-    elif isinstance(name, boto.ec2.instance.Instance):
-      return name
+    elif isinstance(name, Instance):
+      return self._get_by_name(name.instance_name)
     else:
       print name
       
   def _get_by_name(self, name):
-    for inst in self.list_instances():
+    for inst in self.all():
       if name == inst.tags.get('name', None):
         return inst
     return None
     
-  def list_instances(self):
+  def all(self):
     """List instances"""
     running_instances = []
     reservations = self.conn.get_all_instances()
@@ -98,12 +91,12 @@ class Aws(Provider):
     f = open(os.path.join(this_dir, '..', '..', 'bootstrap', script_name + '.sh'))
     return base64.b64encode(f.read())
     
-  def _setup_security_group(self, config, launch_config):
-    group_name = self.config['keyname'] + "-" + config['name']
+  def _setup_security_group(self, instance, launch_config):
+    group_name = instance.keyname() + "-" + instance.instance_name
     groups = [g for g in self.conn.get_all_security_groups() if g.name == group_name]
     group = groups[0] if groups else None
     if not group:
-      print "Creating group '%s'..."%(group_name,)
+      instance.environment.debug("Creating group '%s'..."%(group_name,))
       group = self.conn.create_security_group(group_name, "A group for %s"%(group_name,))
     
     expected_rules = []
@@ -114,8 +107,8 @@ class Aws(Provider):
             rule = SecurityGroupRule(str(proto), str(port), str(port), str(cidr), None)
             expected_rules.append(rule)
     
-    for g in self.conn.get_all_security_groups():
-      expected_rules.append(SecurityGroupRule('tcp', 22, 65535, '0.0.0.0/0', g.name))
+    # for g in self.conn.get_all_security_groups():
+      # expected_rules.append(SecurityGroupRule('tcp', 22, 65535, '0.0.0.0/0', g.name))
     
     current_rules = []
     for rule in group.rules:
@@ -190,6 +183,8 @@ class Aws(Provider):
     
     return machine_config
     
+  ## Load the aws credentials, either from the 
+  ## config, or from the environment
   def _load_credentials(self):
     """Load credentials"""
     try:

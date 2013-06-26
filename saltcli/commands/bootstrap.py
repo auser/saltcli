@@ -9,5 +9,14 @@ class Bootstrap(Command):
     
   def run(self):
     """Bootstrap"""
-    inst = self.provider.get(self.obj['name'])
-    self.provider.bootstrap(inst, self.obj)
+    if self.obj['all']:
+      for inst in self.provider.all():
+        conf = self.obj.copy()
+        name, original_name = inst.tags['name'], inst.tags['original_name']
+        if original_name != "master":
+          conf['original_name'] = original_name
+          conf['name'] = name
+          self.provider.bootstrap(inst, conf)
+    else:
+      inst = self.provider.get(self.obj['name'])
+      self.provider.bootstrap(inst, self.obj)

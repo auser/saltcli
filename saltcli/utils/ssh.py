@@ -2,6 +2,11 @@ from fabric.api import run, env, put, local, sudo
 from subprocess import call
 from fabric.tasks import execute
 from fabric.operations import open_shell
+from saltcli.utils.utils import build_fabric_env
+
+import time
+import logging
+import socket
 
 class Ssh(object):
   """docstring for Ssh"""
@@ -23,6 +28,8 @@ class Ssh(object):
     env = self._env(inst)
     def _run_command():
       run("{0}".format(cmd))
+      
+    print "hosts: {0}".format(env)
     execute(_run_command, hosts=env.hosts)
     
   def sudo_command(self, inst, cmd, obj={}):
@@ -77,19 +84,15 @@ class Ssh(object):
       '-e "ssh {0}"'.format(self._ssh_opts_str(env)),
     ])
     
-  def _env(self, inst):
-    env.hosts = [inst.ip_address]
-    env.key_filename = self.config['key_file']
-    env.user = self.config.get('ssh_username', 'root')
-    env.port = self.config.get('ssh_port', 22)
-    return env
+  def _env(self, insts):
+    return build_fabric_env(insts, self.config)
     
   def _execute(self, cmd, **kwargs):
     print "cmd: {0} {1}".format(cmd, kwargs)
     execute(cmd, **kwargs)
     
   ## Salt cloud
-  def wait_for_ssh(host, port=22, timeout=900):
+  def wait_for_ssh(self, host, port=22, timeout=900):
       '''
       Wait until an ssh connection can be made on a specified host
       '''

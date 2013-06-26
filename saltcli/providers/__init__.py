@@ -1,10 +1,10 @@
 import StringIO
 from fabric.api import sudo, put
 from fabric.tasks import execute
-from saltcli.lib.ssh import Ssh
-from saltcli.lib.utils import query_yes_no
-from saltcli.lib import utils
-import os
+from saltcli.utils.ssh import Ssh
+from saltcli.utils import utils
+import os, sys, time
+import importlib
 
 class Provider(object):
   """Provider"""
@@ -23,7 +23,7 @@ class Provider(object):
   def get(self, name):
     pass
     
-  def list_instances(self):
+  def all(self):
     pass
     
   def highstate(self, conf={}):
@@ -64,7 +64,7 @@ class Provider(object):
     ## Run bootstrap script
     print "Uploading {0}".format(local_file)
     self.ssh.upload(inst, local_file, "/srv/salt/")
-    index = len(self.list_instances()) + 1
+    index = len(self.all()) + 1
     
     def bootstrap_script():
       # cmd = "sudo /bin/sh #{remotepath} #{provider.to_s} #{name} #{master_server.preferred_ip} #{environment} #{index} #{rs}"
@@ -81,7 +81,10 @@ class Provider(object):
     
     ## Run bootstrap script
     execute(bootstrap_script, hosts=[inst.ip_address])
-    self.accept_minion_key(inst, name)
+    
+    # Don't generate a new saltmaster key
+    if conf.get('original_name', 'master') != 'master':
+      self.accept_minion_key(inst, name)
   
   ## Accept the minion key
   def accept_minion_key(self, inst, name):
@@ -113,21 +116,25 @@ class Provider(object):
     self.ssh.execute(self._master_server(), _accept)
     
   def remove_minion_key(self, name):
-    def _remove():
+    def _remove_minion_key():
       pki_dir = "/etc/salt/pki/master"
       key = os.path.join(pki_dir, 'minions', name)
       sudo("rm -f {0}".format(key))
-    
-    self.ssh.execute(self._master_server(), _remove)
+      
+    self.ssh.execute(self._master_server(), _remove_minion_key)
   
   def upload(self, inst, args):
     if len(args) == 0:
       working_dir = os.getcwd()
       args = [os.path.join(working_dir, "deploy", "salt/")]
     self.ssh.upload(inst, *args)
+  
+  # Wait for ready
+  def wait_for_ready(self, instance):
+    self.ssh.wait_for_ssh(instance.ip_address())
     
   def _master_server(self):
-    for inst in self.list_instances():
+    for inst in self.all():
       if inst.tags['original_name'] == "master":
         return inst
     return None

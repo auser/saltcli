@@ -2,12 +2,12 @@ from saltcli.commands import Command
 
 class List(Command):
   """docstring for Launch"""
-  def __init__(self, provider, args, config, obj):
-    super(List, self).__init__(provider, args, config, obj)
+  def __init__(self, environment):
+    super(List, self).__init__(environment)
     
   def run(self):
     """Launch"""
-    instances = self.provider.list_instances()
+    instances = self.environment.provider.all()
     for inst in instances:
       print """{name}:
   id: {id}
