@@ -1,5 +1,4 @@
-#!/bin/bash -e
-# sudo("/tmp/{script} {inst_name} {master_server} {env} {index} {rs}".format(
+#!/bin/bash
 
 HOSTNAME=${1:-master}
 SALT_MASTER=${2:-127.0.0.1}
@@ -109,10 +108,3 @@ respawn limit 5 20
  
 exec salt-minion -d
 """ > /etc/init/salt-minion.conf
-
-sudo restart salt-minion
-salt-call grains.items 2&>1 > /dev/null
-
-sudo salt-key -a saltmaster
-
-sudo restart salt-master

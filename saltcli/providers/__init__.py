@@ -91,42 +91,41 @@ class Provider(object):
         # Don't generate a new saltmaster key
         self.accept_minion_key(instance)
         
+    if 'master' in instances:
+      _upload_and_run_bootstrap_script(instances['master'])
+      del instances['master']
+      
     [_upload_and_run_bootstrap_script(inst) for name, inst in instances.iteritems()]
     
   ## Accept the minion key
   def accept_minion_key(self, instance):
-    def accept_key():
-      sudo("salt-key -a {0}".format(instance.instance_name))
+    priv, pub = utils.gen_keys(4096)
     
+    def _create():
+      pki_dir = "/etc/salt/pki/minion/"
+      priv_key = os.path.join(pki_dir, "minion.pem")
+      put(StringIO.StringIO(priv), priv_key, use_sudo=True, mode=0600)
+      pub_key = os.path.join(pki_dir, "minion.pub")
+      put(StringIO.StringIO(pub), pub_key, use_sudo=True, mode=0600)
+      
+    def _accept(**kwargs):  
+      pki_dir = "/etc/salt/pki/master"
+      for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
+          key_path = os.path.join(pki_dir, key_dir)
+          sudo("mkdir -p {0}".format(key_path))
+          
+      for key_dir in ('minions_pre', 'minions_rejected'):
+        oldkey = os.path.join(pki_dir, key_dir, instance.instance_name)
+        sudo("rm -f {0}".format(oldkey))
+        
+      key = os.path.join(pki_dir, 'minions', instance.instance_name)
+      put(StringIO.StringIO(pub), key, use_sudo=True)
+      sudo("chown root:root {0}".format(key))
+      
+    env = build_fabric_env(instance)
+    self.ssh.execute(instance, _accept)
     env = build_fabric_env(instance.environment.master_server())
-    execute(accept_key)
-    # priv, pub = utils.gen_keys()
-    # 
-    # def _create():
-    #   pki_dir = "/etc/salt/pki/minion/"
-    #   priv_key = os.path.join(pki_dir, "minion.pem")
-    #   put(StringIO.StringIO(priv), priv_key, use_sudo=True, mode=0600)
-    #   pub_key = os.path.join(pki_dir, "minion.pub")
-    #   put(StringIO.StringIO(pub), pub_key, use_sudo=True, mode=0600)
-    #   
-    # def _accept(**kwargs):  
-    #   pki_dir = "/etc/salt/pki/master"
-    #   for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
-    #       key_path = os.path.join(pki_dir, key_dir)
-    #       sudo("mkdir -p {0}".format(key_path))
-    #       
-    #   for key_dir in ('minions_pre', 'minions_rejected'):
-    #     oldkey = os.path.join(pki_dir, key_dir, instance.instance_name)
-    #     sudo("rm -f {0}".format(oldkey))
-    #     
-    #   key = os.path.join(pki_dir, 'minions', instance.instance_name)
-    #   put(StringIO.StringIO(pub), key, use_sudo=True)
-    #   sudo("chown root:root {0}".format(key))
-    #   
-    # env = build_fabric_env(instance)
-    # execute(_create)
-    # env = build_fabric_env(instance.environment.master_server())
-    # execute(_accept)
+    self.ssh.execute(instance.environment.master_server(), _accept)
     
   def remove_minion_key(self, instance):
     if instance.environment.master_server():
