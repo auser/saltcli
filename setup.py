@@ -114,7 +114,7 @@ setup(
     author_email='me@ari.io',
     packages=find_packages(),
     url='',
-    scripts=['bin/salt'],
+    scripts=['bin/saltcli'],
     license='LICENSE.txt',
     description='Salt cli',
     long_description=open('README.md').read(),
