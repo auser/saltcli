@@ -7,6 +7,7 @@ INDEX=${4:-1}
 ROLES=${5:-salt.minion}
 
 echo "------> Bootstrapping minion $HOSTNAME (master: $SALT_MASTER) for environment $ENV"
+echo "--------> Roles: $ROLES"
 
 __apt_get_noinput() {
     apt-get install -y -o DPkg::Options::=--force-confold $@
