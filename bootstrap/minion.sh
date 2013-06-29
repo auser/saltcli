@@ -1,11 +1,10 @@
-#!/bin/bash
-# "/srv/salt/{script} {inst_name} {master_server} {env} {index} {rs}"
+#!/bin/bash -ex
 
 HOSTNAME=${1:-minion}
 SALT_MASTER=${2:-192.168.98.11}
 ENV=${3:-development}
 INDEX=${4:-1}
-ROLES=${5:-salt}
+ROLES=${5:-salt.minion}
 
 echo "------> Bootstrapping minion $HOSTNAME (master: $SALT_MASTER) for environment $ENV"
 
@@ -30,7 +29,9 @@ hostname `cat /etc/hostname`
 # latest open-source efforts
 #
 # Eventually, we can come to settle down on our own way of bootstrapping
-curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
+(
+  curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
+)
 
 # Set salt master location and start minion
 echo """

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -ex
 
 HOSTNAME=${1:-master}
 SALT_MASTER=${2:-127.0.0.1}
@@ -12,15 +12,14 @@ __apt_get_noinput() {
     apt-get install -y -o DPkg::Options::=--force-confold $@
 }
 
-apt-get update
+apt-get update -y
 __apt_get_noinput python-software-properties curl debconf-utils
-apt-get update
 
 # We're using the saltstack canonical bootstrap method here to stay with the
 # latest open-source efforts
 #
 # Eventually, we can come to settle down on our own way of bootstrapping
-\curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
+curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
 
 # Set the hostname
 echo """
@@ -95,8 +94,7 @@ roles:
 index: 1
 """ > /etc/salt/grains
 
-echo """
-# salt-minion.conf
+echo """# salt-minion.conf
 description 'salt-minion upstart daemon'
  
 start on (net-device-up and local-filesystems)
@@ -108,3 +106,5 @@ respawn limit 5 20
  
 exec salt-minion -d
 """ > /etc/init/salt-minion.conf
+
+exit

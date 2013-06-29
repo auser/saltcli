@@ -99,7 +99,7 @@ class Provider(object):
     
   ## Accept the minion key
   def accept_minion_key(self, instance):
-    priv, pub = utils.gen_keys(4096)
+    priv, pub = utils.gen_keys()
     
     def _create():
       pki_dir = "/etc/salt/pki/minion/"
@@ -123,9 +123,10 @@ class Provider(object):
       sudo("chown root:root {0}".format(key))
       
     env = build_fabric_env(instance)
-    self.ssh.execute(instance, _accept)
+    print("ERM: [{0}]".format(instance.ip_address()))
+    self.ssh.execute(instance, _create, hosts=[instance.ip_address()])
     env = build_fabric_env(instance.environment.master_server())
-    self.ssh.execute(instance.environment.master_server(), _accept)
+    self.ssh.execute(instance.environment.master_server(), _accept, hosts=[instance.environment.master_server().ip_address()])
     
   def remove_minion_key(self, instance):
     if instance.environment.master_server():

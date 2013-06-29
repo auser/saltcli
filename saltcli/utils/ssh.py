@@ -23,7 +23,7 @@ class Ssh(object):
       host = env.hosts[0],
       opts=self._ssh_opts_str(env),
     )
-    inst.environment.debug("Running shell: {0}".format(cmd))
+    print "Running: {0}".format(cmd)
     call(cmd, shell=True)
     
   def run_command(self, inst, cmd, obj={}):
