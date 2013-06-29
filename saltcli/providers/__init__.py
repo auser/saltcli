@@ -87,15 +87,14 @@ class Provider(object):
     
       ## Run bootstrap script
       execute(bootstrap_script)
-      if not instance.ismaster():
-        # Don't generate a new saltmaster key
-        self.accept_minion_key(instance)
+      # if not instance.ismaster():
+      self.accept_minion_key(instance)
         
     if 'master' in instances:
       _upload_and_run_bootstrap_script(instances['master'])
       del instances['master']
       
-    [_upload_and_run_bootstrap_script(inst) for name, inst in instances.iteritems()]
+    [_upload_and_run_bootstrap_script(inst) for name, inst in instances.iteritems() if inst != None]
     
   ## Accept the minion key
   def accept_minion_key(self, instance):
@@ -110,15 +109,20 @@ class Provider(object):
       
     def _accept(**kwargs):  
       pki_dir = "/etc/salt/pki/master"
+      if instance.ismaster():
+        instance_name = "saltmaster"
+      else:
+        instance_name = instance.instance_name
+        
       for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
           key_path = os.path.join(pki_dir, key_dir)
           sudo("mkdir -p {0}".format(key_path))
           
       for key_dir in ('minions_pre', 'minions_rejected'):
-        oldkey = os.path.join(pki_dir, key_dir, instance.instance_name)
+        oldkey = os.path.join(pki_dir, key_dir, instance_name)
         sudo("rm -f {0}".format(oldkey))
         
-      key = os.path.join(pki_dir, 'minions', instance.instance_name)
+      key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
       
