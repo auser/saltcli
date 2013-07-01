@@ -158,8 +158,11 @@ class Provider(object):
     if config['keyname'][0] == "/":
       config['key_file'] = config['keyname']
     else:
-      home = os.environ['HOME']
-      config['key_file'] = os.path.join(home, ".ec2", "{0}.pem".format(config['keyname']))
+      if 'key_dir' in config:
+        key_dir = config['key_dir']
+      else:
+        key_dir = os.path.join(os.environ['HOME'], ".ec2")
+      config['key_file'] = os.path.join(key_dir, "{0}.pem".format(config['keyname']))
     return config
     
   ## Local the machine config based on the config file

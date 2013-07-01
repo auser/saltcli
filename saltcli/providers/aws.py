@@ -136,6 +136,14 @@ class Aws(Provider):
         if k.name == self.keypair_name():
           keypair = k
       if keypair:
+        if not os.path.exists(self.config['key_file']):
+          instance.environment.debug("""Key cannot be found at {0}
+          Attempting to recreate...
+          """.format(self.config['key_file']))
+          print "FILE DOESN'T EXIST at {0}".format(self.config['key_file'])
+          keypair.delete()
+          keypair = self._create_keypair(instance)
+          
         if keypair.region != self.conn.region:
           instance.environment.debug(
             "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
@@ -146,15 +154,7 @@ class Aws(Provider):
           output = keypair.copy_to_region(self.conn.region)
           print "keypair: {0}".format(output)
     else:
-      try:
-        ## Attempting to create_key_pair
-        key   = self.conn.create_key_pair(self.keypair_name())
-        filepath = os.path.dirname(key_path)
-        key.save(filepath)
-        os.chmod(filepath, 644)
-      except Exception, e:
-        instance.environment.debug("Keypair exception '%s'..."%(e))
-        True
+      self._create_keypair(instance)
     
     return self.keypair_name()
     
@@ -165,6 +165,21 @@ class Aws(Provider):
   # Convenience method to get the keypair
   def keypair_name(self):
     return self.config['keyname']
+    
+  ## Create a keypair per instance
+  def _create_keypair(self, instance):
+    try:
+      key_path = instance.key_filename()
+      ## Attempting to create_key_pair
+      key   = self.conn.create_key_pair(self.keypair_name())
+      filepath = os.path.dirname(key_path)
+      key.save(filepath)
+      os.chmod(key_path, 0644)
+    except Exception, e:
+      instance.environment.debug("Keypair exception '%s'..."%(e))
+      True
+    
+    return key
     
   ## Create the security group and attach the appropriate permissions
   def _setup_security_group(self, instance, launch_config):
@@ -249,7 +264,6 @@ class Aws(Provider):
     self._load_credentials()
     if 'region' in kwargs:
       kwargs['region'] = boto.ec2.get_region(kwargs['region'])
-    print "kwargs: {0}".format(kwargs)
     self.conn = boto.connect_ec2(self.access_key, self.secret_key, **kwargs)
     
   def _load_machine_desc(self, name):
@@ -284,9 +298,9 @@ class Aws(Provider):
       if 'secret_key' in self.config:
         self.secret_key = self.config['secret_key']
       else:
-        self.secret_key = os.environ['AWS_SECRET_ACCESS_KEY']
+        self.secret_key = os.environ['AWS_SECRET_KEY']
     except KeyError: 
-      print "Please set the environment variable AWS_SECRET_ACCESS_KEY"
+      print "Please set the environment variable AWS_SECRET_KEY"
       sys.exit(1)
     
     return True
