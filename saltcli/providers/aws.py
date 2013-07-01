@@ -249,6 +249,7 @@ class Aws(Provider):
     self._load_credentials()
     if 'region' in kwargs:
       kwargs['region'] = boto.ec2.get_region(kwargs['region'])
+    print "kwargs: {0}".format(kwargs)
     self.conn = boto.connect_ec2(self.access_key, self.secret_key, **kwargs)
     
   def _load_machine_desc(self, name):
