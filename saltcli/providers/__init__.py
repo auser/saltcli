@@ -163,6 +163,10 @@ class Provider(object):
       else:
         key_dir = os.path.join(os.environ['HOME'], ".ec2")
       config['key_file'] = os.path.join(key_dir, "{0}.pem".format(config['keyname']))
+      
+    if not 'region' in config:
+      config['region'] = 'us-east-1'
+    
     return config
     
   ## Local the machine config based on the config file

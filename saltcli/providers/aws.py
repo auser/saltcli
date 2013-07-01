@@ -1,5 +1,5 @@
 import os, sys, base64
-import boto
+import boto, boto.ec2
 import time
 import xml.etree.ElementTree as ET
 from saltcli.utils.utils import get_colors
@@ -29,8 +29,8 @@ class Aws(Provider):
   def launch_single_instance(self, instance):
     launch_config = self._load_machine_desc(instance.name)
     ## RELOAD the ec2 connection based on a new region
-    if launch_config['region'] != self.conn.region:
-      self._load_connection(region=launch_config['region'])
+    if self.config['region'] != self.conn.region:
+      self._load_connection(region=self.config['region'])
     
     security_group = self._setup_security_group(instance, launch_config)
     keypair = self._setup_keypair(instance, launch_config)
@@ -114,7 +114,6 @@ class Aws(Provider):
     reservations = self.conn.get_all_instances()
     for res in reservations:
       for inst in res.instances:
-        print "inst: {0}".format(inst)
         if inst.key_name == self.keypair_name() and inst.update() == 'running':
           running_instances.append(inst)
     return running_instances
@@ -137,10 +136,11 @@ class Aws(Provider):
           keypair = k
       if keypair:
         if not os.path.exists(self.config['key_file']):
-          instance.environment.debug("""Key cannot be found at {0}
+          colors = get_colors()
+          instance.environment.debug("""
+          {color}Key cannot be found at {0}{colors}
           Attempting to recreate...
-          """.format(self.config['key_file']))
-          print "FILE DOESN'T EXIST at {0}".format(self.config['key_file'])
+          """.format(self.config['key_file'], color=colors['RED'], colors=colors))
           keypair.delete()
           keypair = self._create_keypair(instance)
           
@@ -174,7 +174,7 @@ class Aws(Provider):
       key   = self.conn.create_key_pair(self.keypair_name())
       filepath = os.path.dirname(key_path)
       key.save(filepath)
-      os.chmod(key_path, 0644)
+      os.chmod(key_path, 0600)
     except Exception, e:
       instance.environment.debug("Keypair exception '%s'..."%(e))
       True
@@ -264,6 +264,9 @@ class Aws(Provider):
     self._load_credentials()
     if 'region' in kwargs:
       kwargs['region'] = boto.ec2.get_region(kwargs['region'])
+    else:
+      kwargs['region'] = boto.ec2.get_region(self.config['region'])
+    
     self.conn = boto.connect_ec2(self.access_key, self.secret_key, **kwargs)
     
   def _load_machine_desc(self, name):
