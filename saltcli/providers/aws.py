@@ -28,11 +28,27 @@ class Aws(Provider):
   def launch_single_instance(self, instance):
     launch_config = self._load_machine_desc(instance.name)
     security_group = self._setup_security_group(instance, launch_config)
+    keypair = self._setup_keypair(instance, launch_config)
     
+    print """
+    Launching an AWS instance:
+    Image: {image_id}
+    Keyname: {key_name}
+    security_group: {security_group}
+    flavor: {flavor}
+    placement: {placement}
+    """.format(
+      image_id=launch_config['image_id'],
+      key_name=instance.keyname(),
+      security_group=security_group.name,
+      flavor=launch_config['flavor'],
+      placement=launch_config['availability_zone'],
+    )
     reservation = self.conn.run_instances(launch_config['image_id'], 
                             key_name=instance.keyname(),
                             security_groups=[security_group.name],
                             instance_type=launch_config['flavor'],
+                            placement=launch_config['availability_zone'],
                             )
     colors = get_colors()
     instance.environment.debug("{0}Launching...{1[ENDC]}".format(colors['GREEN'], colors))
@@ -88,22 +104,35 @@ class Aws(Provider):
     reservations = self.conn.get_all_instances()
     for res in reservations:
       for inst in res.instances:
-        if inst.update() == 'running':
+        if inst.key_name == self.keypair_name() and inst.update() == 'running':
           running_instances.append(inst)
     return running_instances
     
+  ## All the names of every instance
   def all_names(self):
     running_instance_names = []
     for i in self.all():
       running_instance_names.append(i.tags['name'])
     return running_instance_names
     
-  def _get_user_data(self, name):
-    this_dir = os.path.dirname(os.path.realpath(__file__))
-    script_name = "master" if name == "master" else "minion"
-    f = open(os.path.join(this_dir, '..', '..', 'bootstrap', script_name + '.sh'))
-    return base64.b64encode(f.read())
+  # Set up the keypair
+  # This will look at the key_filename
+  def _setup_keypair(self, instance, launch_config):
+    key_path = instance.key_filename()
+    try:
+      ## Attempting to create_key_pair
+      key   = self.conn.create_key_pair(self.keypair_name())
+      key.save(key_path)
+    except Exception, e:
+      True
     
+    return self.keypair_name()
+    
+  # Convenience method to get the keypair
+  def keypair_name(self):
+    return self.config['keyname']
+    
+  ## Create the security group and attach the appropriate permissions
   def _setup_security_group(self, instance, launch_config):
     group_name = instance.keyname() + "-" + instance.instance_name
     groups = [g for g in self.conn.get_all_security_groups() if g.name == group_name]
@@ -180,6 +209,7 @@ class Aws(Provider):
       return self._modify_sg(group, rule, revoke=True)
   
   
+  ## Setup connection
   def _load_connection(self):
     """Load connection"""
     self._load_credentials()
@@ -188,11 +218,14 @@ class Aws(Provider):
   def _load_machine_desc(self, name):
     """Load machine descriptions"""
     machines = self.config['machines']
-    default = machines['default']
+    default_aws_config = {
+      'availability_zone': 'us-east-1d',
+    }
+    default = dict_merge(machines['default'], default_aws_config)
     try:
       machine_config = dict_merge(machines[name], default)
     except Exception, e:
-      print "ECEPTION: {0}".format(e)
+      print "EXCEPTION: {0}".format(e)
       machine_config = default
     
     return machine_config

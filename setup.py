@@ -122,7 +122,6 @@ setup(
         "python-novaclient==2.13.0",
         "Fabric==1.6.0",
         "Jinja2==2.7",
-        "pyyaml",
-        "salt"
+        "pyyaml"
     ],
 )

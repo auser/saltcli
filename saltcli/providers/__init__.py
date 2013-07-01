@@ -161,6 +161,19 @@ class Provider(object):
       home = os.environ['HOME']
       config['key_file'] = os.path.join(home, ".ec2", config['keyname'])
     return config
+    
+  ## Local the machine config based on the config file
+  def _load_machine_desc(self, name):
+    """Load machine descriptions"""
+    machines = self.config['machines']
+    default = machines['default']
+    try:
+      machine_config = dict_merge(machines[name], default)
+    except Exception, e:
+      print "ECEPTION: {0}".format(e)
+      machine_config = default
+    
+    return machine_config
 
 def dict_merge(target, obj):
   if not isinstance(obj, dict):
