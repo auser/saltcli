@@ -159,7 +159,7 @@ class Provider(object):
       config['key_file'] = config['keyname']
     else:
       home = os.environ['HOME']
-      config['key_file'] = os.path.join(home, ".ec2", config['keyname'])
+      config['key_file'] = os.path.join(home, ".ec2", "{0}.pem".format(config['keyname']))
     return config
     
   ## Local the machine config based on the config file

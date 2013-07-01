@@ -31,6 +31,7 @@ class Aws(Provider):
     ## RELOAD the ec2 connection based on a new region
     if launch_config['region'] != self.conn.region:
       self._load_connection(region=launch_config['region'])
+    
     security_group = self._setup_security_group(instance, launch_config)
     keypair = self._setup_keypair(instance, launch_config)
     colors = get_colors()
@@ -113,6 +114,7 @@ class Aws(Provider):
     reservations = self.conn.get_all_instances()
     for res in reservations:
       for inst in res.instances:
+        print "inst: {0}".format(inst)
         if inst.key_name == self.keypair_name() and inst.update() == 'running':
           running_instances.append(inst)
     return running_instances
@@ -128,14 +130,37 @@ class Aws(Provider):
   # This will look at the key_filename
   def _setup_keypair(self, instance, launch_config):
     key_path = instance.key_filename()
-    try:
-      ## Attempting to create_key_pair
-      key   = self.conn.create_key_pair(self.keypair_name())
-      key.save(key_path)
-    except Exception, e:
-      True
+    if self.keypair_name() in [k.name for k in self._all_keypairs()]:
+      keypair = None
+      for k in self._all_keypairs():
+        if k.name == self.keypair_name():
+          keypair = k
+      if keypair:
+        if keypair.region != self.conn.region:
+          instance.environment.debug(
+            "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
+              old=keypair.region.name,
+              curr=self.conn.region,
+            )
+          )
+          output = keypair.copy_to_region(self.conn.region)
+          print "keypair: {0}".format(output)
+    else:
+      try:
+        ## Attempting to create_key_pair
+        key   = self.conn.create_key_pair(self.keypair_name())
+        filepath = os.path.dirname(key_path)
+        key.save(filepath)
+        os.chmod(filepath, 644)
+      except Exception, e:
+        instance.environment.debug("Keypair exception '%s'..."%(e))
+        True
     
     return self.keypair_name()
+    
+  ## ALL KEYPAIRS
+  def _all_keypairs(self):
+    return self.conn.get_all_key_pairs()
     
   # Convenience method to get the keypair
   def keypair_name(self):
