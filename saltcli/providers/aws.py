@@ -140,7 +140,6 @@ class Aws(Provider):
         keypair.delete()
         keypair = self._create_keypair(instance)
       
-      print "keypair.region: {0} conn: {1}".format(keypair.region, self.conn.region)
       if keypair.region != self.conn.region:
         instance.environment.debug(
           "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
