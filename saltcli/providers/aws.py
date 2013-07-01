@@ -129,34 +129,40 @@ class Aws(Provider):
   # This will look at the key_filename
   def _setup_keypair(self, instance, launch_config):
     key_path = instance.key_filename()
-    if self.keypair_name() in [k.name for k in self._all_keypairs()]:
-      keypair = None
-      for k in self._all_keypairs():
-        if k.name == self.keypair_name():
-          keypair = k
-      if keypair:
-        if not os.path.exists(self.config['key_file']):
-          colors = get_colors()
-          instance.environment.debug("""
-          {color}Key cannot be found at {0}{colors}
-          Attempting to recreate...
-          """.format(self.config['key_file'], color=colors['RED'], colors=colors))
-          keypair.delete()
-          keypair = self._create_keypair(instance)
-          
-        if keypair.region != self.conn.region:
-          instance.environment.debug(
-            "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
-              old=keypair.region.name,
-              curr=self.conn.region,
-            )
+    keypair = self._get_keypair()
+    if keypair:
+      if not os.path.exists(self.config['key_file']):
+        colors = get_colors()
+        instance.environment.debug("""
+        {color}Key cannot be found at {0}{colors}
+        Attempting to recreate...
+        """.format(self.config['key_file'], color=colors['RED'], colors=colors))
+        keypair.delete()
+        keypair = self._create_keypair(instance)
+      
+      print "keypair.region: {0} conn: {1}".format(keypair.region, self.conn.region)
+      if keypair.region != self.conn.region:
+        instance.environment.debug(
+          "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
+            old=keypair.region.name,
+            curr=self.conn.region,
           )
-          output = keypair.copy_to_region(self.conn.region)
-          print "keypair: {0}".format(output)
+        )
+        output = keypair.copy_to_region(self.conn.region)
+        print "keypair: {0}".format(output)
     else:
       self._create_keypair(instance)
     
     return self.keypair_name()
+    
+  ## Get keypairs
+  def _get_keypair(self):
+    if self.keypair_name() in [k.name for k in self._all_keypairs()]:
+      for k in self._all_keypairs():
+        if k.name == self.keypair_name():
+          return k
+          
+    return None
     
   ## ALL KEYPAIRS
   def _all_keypairs(self):
