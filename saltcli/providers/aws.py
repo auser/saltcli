@@ -1,6 +1,7 @@
 import os, sys, base64
 import boto
 import time
+import xml.etree.ElementTree as ET
 from saltcli.utils.utils import get_colors
 from saltcli.providers import Provider, dict_merge
 import collections
@@ -27,30 +28,38 @@ class Aws(Provider):
   ## Launch a single instance
   def launch_single_instance(self, instance):
     launch_config = self._load_machine_desc(instance.name)
+    ## RELOAD the ec2 connection based on a new region
+    if launch_config['region'] != self.conn.region:
+      self._load_connection(region=launch_config['region'])
     security_group = self._setup_security_group(instance, launch_config)
     keypair = self._setup_keypair(instance, launch_config)
+    colors = get_colors()
     
-    print """
-    Launching an AWS instance:
-    Image: {image_id}
-    Keyname: {key_name}
-    security_group: {security_group}
-    flavor: {flavor}
-    placement: {placement}
+    print """Launching an AWS instance:
+    Image:          {color}{image_id}{colors[ENDC]}
+    Keyname:        {color}{key_name}{colors[ENDC]}
+    security_group: {color}{security_group}{colors[ENDC]}
+    flavor:         {color}{flavor}{colors[ENDC]}
+    placement:      {color}{placement}{colors[ENDC]}
     """.format(
       image_id=launch_config['image_id'],
       key_name=instance.keyname(),
       security_group=security_group.name,
       flavor=launch_config['flavor'],
-      placement=launch_config['region'],
+      placement=self.conn.region,
+      color=colors['YELLOW'],
+      colors=colors
     )
-    reservation = self.conn.run_instances(launch_config['image_id'], 
-                            key_name=instance.keyname(),
-                            security_groups=[security_group.name],
-                            instance_type=launch_config['flavor'],
-                            placement=launch_config['region'],
-                            )
-    colors = get_colors()
+    try:
+      reservation = self.conn.run_instances(launch_config['image_id'], 
+                              key_name=instance.keyname(),
+                              security_groups=[security_group.name],
+                              instance_type=launch_config['flavor'],
+                              )
+    except boto.exception.EC2ResponseError as e:
+      print "Exception: {0}".format(e)
+      if e.status == 400:
+        sys.exit(-1)
     instance.environment.debug("{0}Launching...{1[ENDC]}".format(colors['GREEN'], colors))
     running_instance = reservation.instances[0] #### <~ ew
     # Check up on its status every so often
@@ -210,16 +219,18 @@ class Aws(Provider):
   
   
   ## Setup connection
-  def _load_connection(self):
+  def _load_connection(self, **kwargs):
     """Load connection"""
     self._load_credentials()
-    self.conn = boto.connect_ec2(self.access_key, self.secret_key)
+    if 'region' in kwargs:
+      kwargs['region'] = boto.ec2.get_region(kwargs['region'])
+    self.conn = boto.connect_ec2(self.access_key, self.secret_key, **kwargs)
     
   def _load_machine_desc(self, name):
     """Load machine descriptions"""
     machines = self.config['machines']
     default_aws_config = {
-      'region': 'us-east-1d',
+      'region': 'us-east-1',
     }
     default = dict_merge(machines['default'], default_aws_config)
     try:
