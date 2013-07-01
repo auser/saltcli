@@ -42,13 +42,13 @@ class Aws(Provider):
       key_name=instance.keyname(),
       security_group=security_group.name,
       flavor=launch_config['flavor'],
-      placement=launch_config['availability_zone'],
+      placement=launch_config['region'],
     )
     reservation = self.conn.run_instances(launch_config['image_id'], 
                             key_name=instance.keyname(),
                             security_groups=[security_group.name],
                             instance_type=launch_config['flavor'],
-                            placement=launch_config['availability_zone'],
+                            placement=launch_config['region'],
                             )
     colors = get_colors()
     instance.environment.debug("{0}Launching...{1[ENDC]}".format(colors['GREEN'], colors))
@@ -219,7 +219,7 @@ class Aws(Provider):
     """Load machine descriptions"""
     machines = self.config['machines']
     default_aws_config = {
-      'availability_zone': 'us-east-1d',
+      'region': 'us-east-1d',
     }
     default = dict_merge(machines['default'], default_aws_config)
     try:
