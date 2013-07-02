@@ -55,3 +55,5 @@ for i in $(echo "$ROLES" | tr "," "\n")
 do
   echo "  - ${i}" >> /etc/salt/grains
 done
+
+salt-minion -d || true

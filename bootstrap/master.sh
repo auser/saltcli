@@ -19,6 +19,7 @@ __apt_get_noinput python-software-properties curl debconf-utils
 # latest open-source efforts
 
 pkill salt-master || true
+pkill salt-minion || true
 
 # Eventually, we can come to settle down on our own way of bootstrapping
 curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
@@ -107,4 +108,5 @@ respawn limit 5 20
 exec salt-minion -d
 """ > /etc/init/salt-minion.conf
 
-exit
+salt-master -d || true
+salt-minion -d || true

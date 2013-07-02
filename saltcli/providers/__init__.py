@@ -153,7 +153,6 @@ class Provider(object):
       sudo("restart salt-master")
       
     env = build_fabric_env(instance)
-    print("ERM: [{0}]".format(instance.ip_address()))
     self.ssh.execute(instance, _create, hosts=[instance.ip_address()])
     env = build_fabric_env(instance.environment.master_server())
     self.ssh.execute(instance.environment.master_server(), _accept, hosts=[instance.environment.master_server().ip_address()])
