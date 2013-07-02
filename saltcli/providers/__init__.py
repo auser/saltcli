@@ -36,6 +36,7 @@ class Provider(object):
       
       @parallel
       def highstate():
+        sudo("salt-call saltutil.sync_all")
         sudo("salt-call mine.update")
         sudo("salt-call state.highstate")
       
@@ -125,6 +126,7 @@ class Provider(object):
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
+      sudo("restart salt-master")
       
     env = build_fabric_env(instance)
     print("ERM: [{0}]".format(instance.ip_address()))

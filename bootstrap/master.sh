@@ -80,8 +80,6 @@ id: saltmaster
 grains:
   environment: $ENV
   location: $LOC
-  roles: 
-    - master
 
 log_file: /var/log/salt/minion
 log_level: debug
@@ -90,7 +88,7 @@ log_level_logfile: garbage
 
 echo """
 roles:
-  - master
+  - saltmaster
 index: 1
 """ > /etc/salt/grains
 
