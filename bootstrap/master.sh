@@ -65,7 +65,7 @@ peer:
 master: 127.0.0.1
 grains:
   roles: 
-    - master
+    - saltmaster
   environment: $ENV
   location: $LOC
 """ > /etc/salt/master
