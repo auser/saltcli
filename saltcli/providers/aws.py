@@ -134,9 +134,9 @@ class Aws(Provider):
       if not os.path.exists(self.config['key_file']):
         colors = get_colors()
         instance.environment.debug("""
-        {color}Key cannot be found at {0}{colors}
+        {color}Key cannot be found at {key_file}{colors[ENDC]}
         Attempting to recreate...
-        """.format(self.config['key_file'], color=colors['RED'], colors=colors))
+        """.format(key_file=self.config['key_file'], color=colors['RED'], colors=colors))
         keypair.delete()
         keypair = self._create_keypair(instance)
       

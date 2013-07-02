@@ -55,6 +55,7 @@ class Ssh(object):
       sudo("mkdir -p {remote}".format(remote=remote_file))
       sudo("chown -R {user}:{user} {remote}".format(user=env.user, remote=remote_file))
 
+    print env
     execute(prepare_upload)
     
     print "Running: {0}".format(cmd)
