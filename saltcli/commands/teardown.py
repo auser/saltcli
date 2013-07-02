@@ -16,6 +16,6 @@ class Teardown(Command):
         else:
           print "Aborting..."
     inst = self.environment.master_server()
-    if inst:
+    if 'master' in self.environment.instances:
       if self.environment.opts.get('answer_yes', False) or query_yes_no("Are you sure you want to teardown {0}?".format(inst.name)):
         inst.teardown()

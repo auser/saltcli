@@ -12,4 +12,4 @@ class Command(object):
   def load_provider(self):
     """docstring for load_provider"""
     provider_config = self.config['providers'][self.provider_name]
-    return get_provider(self.provider_name)(provider_config)
+    return get_provider(self.provider_name)(self.environment, provider_config)

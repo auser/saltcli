@@ -28,7 +28,9 @@ hostname `cat /etc/hostname`
 
 # We're using the saltstack canonical bootstrap method here to stay with the
 # latest open-source efforts
-#
+
+pkill salt-minion || true
+
 # Eventually, we can come to settle down on our own way of bootstrapping
 (
   curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable

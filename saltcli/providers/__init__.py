@@ -5,15 +5,17 @@ from fabric.tasks import execute
 from saltcli.utils.ssh import Ssh
 from saltcli.utils import utils
 from saltcli.utils.utils import build_fabric_env
+from saltcli.utils.utils import get_colors
 import os, sys, time
 import importlib
 
 class Provider(object):
   """Provider"""
-  def __init__(self, config):
+  def __init__(self, environment, config):
     super(Provider, self).__init__()
     config = self._build_provider_config(config)
     self.config = config
+    self.environment = environment
     self.ssh = Ssh(config)
     
   def launch(self, conf={}):
@@ -28,22 +30,39 @@ class Provider(object):
   def all(self):
     pass
     
+  @parallel
+  def _prepare_for_highstate(self):
+    sudo("salt-call saltutil.sync_all")
+    sudo("salt-call mine.update")
+    
   def highstate(self, instances):
     if instances:
       instances = instances.values()
       salt_dir = os.path.join(os.getcwd(), "deploy", "salt/")
       instances[0].environment.master_server().upload(salt_dir, "/srv/salt")
-      
+              
       @parallel
       def highstate():
-        sudo("salt-call saltutil.sync_all")
-        sudo("salt-call mine.update")
         sudo("salt-call state.highstate")
       
       env = build_fabric_env(instances)
+      execute(self._prepare_for_highstate)
       execute(highstate)
     else:
       print "There was an error finding the instance you're referring to by name: {0}".format(name)
+      
+  def overstate(self, instances):
+    colors = get_colors()
+    if instances:
+      instances = instances.values()
+      env = build_fabric_env(self.environment.master_server())
+      execute(self._prepare_for_highstate)
+      def highstate():
+        sudo("salt-run state.over")
+      
+      execute(highstate)
+    else:
+      self.environment.debug("There was an error finding any instances")
     
   ## PRIVATE
   def bootstrap(self, instances):
@@ -76,7 +95,8 @@ class Provider(object):
         # cmd = "sudo /bin/sh #{remotepath} #{provider.to_s} #{name} #{master_server.preferred_ip} #{environment} #{index} #{rs}"
         script_name = os.path.basename(get_script(instance))
         sudo("chmod u+x /tmp/{script}".format(script=script_name))
-        sudo("/tmp/{script} {inst_name} {master_server} {env} {index} {rs}".format(
+        
+        script = "/tmp/{script} {inst_name} {master_server} {env} {index} {rs}".format(
           script = script_name,
           provider_name = self.__class__.__name__.lower(),
           inst_name = instance.instance_name,
@@ -84,7 +104,9 @@ class Provider(object):
           env = instance.environment.environment,
           index = index,
           rs = ",".join(instance.roles)
-        ))
+        )
+        instance.environment.debug("Running bootstrap_script: {0}".format(script))
+        sudo(script)
     
       ## Run bootstrap script
       execute(bootstrap_script)
@@ -107,6 +129,8 @@ class Provider(object):
       put(StringIO.StringIO(priv), priv_key, use_sudo=True, mode=0600)
       pub_key = os.path.join(pki_dir, "minion.pub")
       put(StringIO.StringIO(pub), pub_key, use_sudo=True, mode=0600)
+      sudo("pkill salt-minion")
+      sudo("salt-minion -d")
       
     def _accept(**kwargs):  
       pki_dir = "/etc/salt/pki/master"

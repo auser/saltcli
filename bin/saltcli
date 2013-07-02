@@ -49,9 +49,10 @@ def main(argv):
   working_obj['command'] = command
   
   try:
-    opts, args = getopt.getopt(argv[2:], 'hdn:c:e:p:r:ya', [
+    opts, args = getopt.getopt(argv[2:], 'hdtn:c:e:p:r:ya', [
                                             'help', 
                                             'debug',
+                                            'test',
                                             'name=',
                                             'config_file=',
                                             'environment=',
@@ -69,6 +70,8 @@ def main(argv):
       help()
     elif o in ('-d', '--debug'):
       working_obj['debug'] = True
+    elif o in ('-t', '--test'):
+      working_obj['test'] = True
     elif o in ('-n', '--name'):
       working_obj['name'] = a.split(",")
     elif o in ('-e', '--environment'):

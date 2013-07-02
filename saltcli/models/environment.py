@@ -31,7 +31,10 @@ class Environment(object):
         
     self.instances    = {}
     if opts.get('all', False):
-      all_instance_names = self.provider.all_names()
+      if not self.plan is None: 
+        all_instance_names = self.plan.keys()
+      else:
+        all_instance_names = self.provider.all_names()
     else:
       all_instance_names = opts['name']
     for inst_name in all_instance_names:
@@ -59,7 +62,7 @@ class Environment(object):
   def load_provider(self):
     provider_config = self.config.get('providers')[self.provider_name]
     mod = importlib.import_module("saltcli.providers." + self.provider_name)
-    self.provider =  getattr(mod, self.provider_name.capitalize())(provider_config)
+    self.provider =  getattr(mod, self.provider_name.capitalize())(self, provider_config)
   
   ## Load the config file
   def load_conf(self):

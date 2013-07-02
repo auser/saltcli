@@ -9,8 +9,8 @@ import collections
 SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", "from_port", "to_port", "cidr_ip", "src_group_name"])
 
 class Aws(Provider):
-  def __init__(self, config):
-    super(Aws, self).__init__(config)
+  def __init__(self, environment, config):
+    super(Aws, self).__init__(environment, config)
     self._load_connection()
     
   ## Public methods
@@ -18,6 +18,8 @@ class Aws(Provider):
     if not isinstance(instances, dict):
       instances = [instances]
     for name, inst in instances.iteritems():
+      launch_config = self._load_machine_desc(name)
+      security_group = self._setup_security_group(inst, launch_config)
       if inst.get():
         colors = get_colors()
         inst.environment.info("{0}Not launching {1}. It is already launched.{2[ENDC]}".format(colors['RED'], name, colors))
@@ -238,14 +240,14 @@ class Aws(Provider):
           src_group = self.conn.get_all_security_groups([rule.src_group_name,])[0]
  
       if authorize and not revoke:
-          # print "Authorizing missing rule %s..."%(rule,)
+          print "Authorizing missing rule %s..."%(rule,)
           group.authorize(ip_protocol=rule.ip_protocol,
                           from_port=str(rule.from_port),
                           to_port=str(rule.to_port),
                           cidr_ip=rule.cidr_ip,
                           src_group=src_group)
       elif not authorize and revoke:
-          # print "Revoking unexpected rule %s..."%(rule,)
+          print "Revoking unexpected rule %s..."%(rule,)
           group.revoke(ip_protocol=rule.ip_protocol,
                        from_port=str(rule.from_port),
                        to_port=str(rule.to_port),

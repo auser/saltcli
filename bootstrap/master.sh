@@ -4,7 +4,7 @@ HOSTNAME=${1:-master}
 SALT_MASTER=${2:-127.0.0.1}
 ENV=${3:-development}
 INDEX=${4:-1}
-ROLES=${5:-master}
+ROLES=${5:-saltmaster}
 
 echo "------> Bootstrapping master for environment $ENV"
 
@@ -17,7 +17,9 @@ __apt_get_noinput python-software-properties curl debconf-utils
 
 # We're using the saltstack canonical bootstrap method here to stay with the
 # latest open-source efforts
-#
+
+pkill salt-master || true
+
 # Eventually, we can come to settle down on our own way of bootstrapping
 curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
 
