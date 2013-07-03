@@ -151,7 +151,8 @@ class Provider(object):
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
-      sudo("restart salt-master")
+      sudo("pkill salt-master 2&1 > /dev/null")
+      sudo("salt-master -d")
       
     env = build_fabric_env(instance)
     self.ssh.execute(instance, _create, hosts=[instance.ip_address()])
