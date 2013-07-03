@@ -109,10 +109,10 @@ class Provider(object):
         instance.environment.debug("Running bootstrap_script: {0}".format(script))
         sudo(script)
     
-      # if not instance.ismaster():
-      self.accept_minion_key(instance)
       ## Run bootstrap script
       execute(bootstrap_script)
+      # if not instance.ismaster():
+      self.accept_minion_key(instance)
         
     if 'master' in instances:
       _upload_and_run_bootstrap_script(instances['master'])
@@ -130,6 +130,7 @@ class Provider(object):
       put(StringIO.StringIO(priv), priv_key, use_sudo=True, mode=0600)
       pub_key = os.path.join(pki_dir, "minion.pub")
       put(StringIO.StringIO(pub), pub_key, use_sudo=True, mode=0600)
+      sudo("restart salt-minion || start salt-minion || true")
       
     def _accept(**kwargs):  
       pki_dir = "/etc/salt/pki/master"
@@ -149,6 +150,7 @@ class Provider(object):
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
+      sudo("start salt-master || restart salt-master || true")
       
     env = build_fabric_env(instance)
     self.ssh.execute(instance, _create, hosts=[instance.ip_address()])
