@@ -130,8 +130,6 @@ class Provider(object):
       put(StringIO.StringIO(priv), priv_key, use_sudo=True, mode=0600)
       pub_key = os.path.join(pki_dir, "minion.pub")
       put(StringIO.StringIO(pub), pub_key, use_sudo=True, mode=0600)
-      sudo("pkill salt-minion")
-      sudo("salt-minion -d")
       
     def _accept(**kwargs):  
       pki_dir = "/etc/salt/pki/master"
@@ -151,8 +149,6 @@ class Provider(object):
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
-      sudo("pkill salt-master 2&1 > /dev/null")
-      sudo("salt-master -d")
       
     env = build_fabric_env(instance)
     self.ssh.execute(instance, _create, hosts=[instance.ip_address()])

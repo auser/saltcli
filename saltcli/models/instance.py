@@ -58,3 +58,5 @@ class Instance(object):
   ## Upload
   def upload(self, local_file, remote_file):
     self.environment.ssh.upload(self, local_file, remote_file)
+  def upload_file(self, local_file, remote_file):
+    self.environment.ssh.upload_file(self, local_file, remote_file)

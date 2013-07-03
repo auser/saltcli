@@ -1,8 +1,9 @@
-from fabric.api import run, env, put, local, sudo
+from fabric.api import run, env, put, local, sudo, cd
 from subprocess import call
 from fabric.tasks import execute
 from fabric.operations import open_shell
 from saltcli.utils.utils import build_fabric_env
+import os
 
 import time
 import logging
@@ -40,7 +41,7 @@ class Ssh(object):
       sudo("{0}".format(cmd))
     execute(_run_command, hosts=env.hosts)
 
-  ## Upload a file
+  ## Upload a directory
   def upload(self, instance, local_file, remote_file='/srv/salt'):
     env = self._env(instance)
     cmd = "{rsync} {local} {user}@{host}:{remote}".format(
@@ -59,6 +60,16 @@ class Ssh(object):
     
     print "Running: {0}".format(cmd)
     call(cmd, shell=True)
+    
+  ## Upload a file
+  def upload_file(self, instance, local_file, remote_file='/srv/salt'):
+    env = self._env(instance)    
+    def prepare_upload():
+      instance.environment.debug("Uploading file {0} to {1}".format(local_file, remote_file))
+      put(local_file, remote_file, use_sudo=True)
+      sudo("chown -R {user}:{user} {remote}".format(user=env.user, remote=remote_file))
+
+    self.execute(instance, prepare_upload)
   
   def execute(self, inst, m, **kwargs):
     env = self._env(inst)

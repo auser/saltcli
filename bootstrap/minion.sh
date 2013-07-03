@@ -29,11 +29,16 @@ hostname `cat /etc/hostname`
 # We're using the saltstack canonical bootstrap method here to stay with the
 # latest open-source efforts
 
-pkill salt-minion || true
+killall salt-minion || true
 
 # Eventually, we can come to settle down on our own way of bootstrapping
 (
-  curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
+  # curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
+  add-apt-repository ppa:saltstack/salt -y
+  apt-get update -y
+  apt-get install salt-minion -y
+  apt-get install salt-master -y
+  apt-get upgrade -y
 )
 
 # Set salt master location and start minion

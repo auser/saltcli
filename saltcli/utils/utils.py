@@ -13,15 +13,15 @@ def build_fabric_env(insts, config={}):
   env.port          = inst.ssh_port()
   return env
 
-def gen_keys(keysize=2048):
+def gen_keys(keysize=4096):
     '''
     Generate Salt minion keys and return them as PEM file strings
     '''
-    # Mandate that keys are at least 2048 in size
-    if keysize < 2048:
-        keysize = 2048
+    # Mandate that keys are at least 4096 in size
+    if keysize < 4096:
+        keysize = 4096
     tdir = tempfile.mkdtemp()
-
+    
     salt.crypt.gen_keys(tdir, 'minion', keysize, 'root')
     priv_path = os.path.join(tdir, 'minion.pem')
     pub_path = os.path.join(tdir, 'minion.pub')
