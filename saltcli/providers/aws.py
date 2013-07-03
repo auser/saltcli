@@ -1,6 +1,7 @@
 import os, sys, base64
 import boto, boto.ec2
 import time
+from stat import *
 import xml.etree.ElementTree as ET
 from saltcli.utils.utils import get_colors
 from saltcli.providers import Provider, dict_merge
@@ -141,6 +142,14 @@ class Aws(Provider):
         """.format(key_file=self.config['key_file'], color=colors['RED'], colors=colors))
         keypair.delete()
         keypair = self._create_keypair(instance)
+      
+      st = os.stat(key_path).st_mode
+      mode = oct(S_IMODE(os.stat(key_path).st_mode))
+      if not mode == '0600':
+        self.environment.error("""
+The key {0} does not have the proper permissions ({1}). 
+Please check your permissions and try again.
+        """.format(key_path, mode))
       
       if keypair.region != self.conn.region:
         instance.environment.debug(

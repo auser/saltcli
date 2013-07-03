@@ -44,6 +44,8 @@ class Environment(object):
         instance_options = {
           'roles': opts['roles']
         }
+      if instance_options is None:
+        self.error("No options found for the instance named: {0}\nPlease check your configuration and try again".format(inst_name))
       inst = Instance(inst_name, instance_options, self)
       self.instances[inst_name] = inst
   
@@ -91,4 +93,8 @@ class Environment(object):
     
   def debug(self, msg): self.log.debug(msg)
   def info(self, msg): self.log.info(msg)
-    
+  def error(self, msg):
+    colors = get_colors()
+    msg = "{0}{1}{2[ENDC]}".format(colors['RED'], msg, colors)
+    self.log.error(msg)
+    sys.exit(-1)

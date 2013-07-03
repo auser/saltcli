@@ -7,15 +7,16 @@ from saltcli.utils import utils
 from saltcli.utils.utils import build_fabric_env
 from saltcli.utils.utils import get_colors
 import os, sys, time
+from stat import *
 import importlib
 
 class Provider(object):
   """Provider"""
   def __init__(self, environment, config):
     super(Provider, self).__init__()
+    self.environment = environment
     config = self._build_provider_config(config)
     self.config = config
-    self.environment = environment
     self.ssh = Ssh(config)
     
   def launch(self, conf={}):
