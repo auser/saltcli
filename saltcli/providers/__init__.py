@@ -109,10 +109,10 @@ class Provider(object):
         instance.environment.debug("Running bootstrap_script: {0}".format(script))
         sudo(script)
     
-      ## Run bootstrap script
-      execute(bootstrap_script)
       # if not instance.ismaster():
       self.accept_minion_key(instance)
+      ## Run bootstrap script
+      execute(bootstrap_script)
         
     if 'master' in instances:
       _upload_and_run_bootstrap_script(instances['master'])
