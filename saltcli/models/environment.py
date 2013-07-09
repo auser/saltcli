@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import yaml
 import logging
 import importlib
@@ -11,7 +11,7 @@ class Environment(object):
   def __init__(self, opts):
     super(Environment, self).__init__()
     self.opts           = opts
-    self.config_file    = opts['config_file']
+    self._load_config_file(opts['config_file'])
     self.provider_name  = opts['provider']
     # TODO: Make this dynamic so different configuration
     # file formats are acceptable
@@ -98,3 +98,13 @@ class Environment(object):
     msg = "{0}{1}{2[ENDC]}".format(colors['RED'], msg, colors)
     self.log.error(msg)
     sys.exit(-1)
+    
+  def _load_config_file(self, config_file):
+    try:
+      if os.path.isfile(config_file):
+        self.config_file = config_file
+      elif os.path.isfile(os.environ['SALT_CONFIG_FILE']):
+        self.config_file = os.environ['SALT_CONFIG_FILE']
+    except Exception, e:
+      print "Please either pass a config file with -c [file] or set as an environment variable as SALT_CONFIG_FILE"
+      sys.exit(1)

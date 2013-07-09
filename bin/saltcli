@@ -32,6 +32,7 @@ working_obj = {
   'environment': 'development',
   'plan': None,
   'roles': [],
+  'all': False,
   }
 
 def main(argv):

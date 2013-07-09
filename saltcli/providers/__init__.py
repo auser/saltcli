@@ -70,8 +70,11 @@ class Provider(object):
   
   ## Run a command
   def cmdrun(self, command):
-    names = self.environment.instances.keys()
-    instance_names = ["*{0}*".format(name) for name in names]
+    if self.environment.opts['all'] is False:
+      names = self.environment.instances.keys()
+      instance_names = ["*{0}*".format(name) for name in names]
+    else:
+      instance_names = ['*']
     @parallel
     def _cmdrun():
       sudo("salt -C '{0}' cmd.run {1}".format(" or ".join(instance_names), command))
@@ -122,6 +125,7 @@ class Provider(object):
         )
         instance.environment.debug("Running bootstrap_script: {0}".format(script))
         sudo(script)
+        sudo("restart salt-minion || start salt-minion || true")
     
       ## Run bootstrap script
       execute(bootstrap_script)
