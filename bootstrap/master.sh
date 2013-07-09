@@ -15,7 +15,19 @@ __apt_get_noinput() {
 apt-get update -y
 __apt_get_noinput python-software-properties curl debconf-utils
 
+# We're using the saltstack canonical bootstrap method here to stay with the
+# latest open-source efforts
 
+service salt-master stop || true
+service salt-minion stop || true
+
+# We're using the saltstack canonical bootstrap method here to stay with the
+# latest open-source efforts
+#
+# Eventually, we can come to settle down on our own way of bootstrapping
+(
+  exec curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
+)
 # Set the hostname
 echo """
 127.0.0.1       localhost   saltmaster
@@ -87,21 +99,41 @@ roles:
 index: 1
 """ > /etc/salt/grains
 
-echo """# salt-minion.conf
-description 'salt-minion upstart daemon'
- 
-start on (net-device-up and local-filesystems)
-stop on shutdown
- 
-expect fork
+echo """# salt-master.conf
+description 'salt-master upstart daemon'
+
+start on (net-device-up
+          and local-filesystems
+          and runlevel [2345])
+stop on runlevel [!2345]
+limit nofile 100000 100000
+
 respawn
 respawn limit 5 20
- 
-exec salt-minion -d
+
+script
+exec salt-master
+end script
+""" > /etc/init/salt-master.conf
+
+echo """# salt-minion.conf
+description 'salt-minion upstart daemon'
+
+start on (net-device-up
+          and local-filesystems
+          and runlevel [2345])
+stop on runlevel [!2345]
+limit nofile 100000 100000
+
+respawn
+respawn limit 5 20
+
+script
+exec salt-minion
+end script
+
 """ > /etc/init/salt-minion.conf
 
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
-#
-# Eventually, we can come to settle down on our own way of bootstrapping
-curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
+service salt-minion restart || service salt-minion start || true
+
+salt-key -a saltmaster
