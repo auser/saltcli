@@ -26,11 +26,6 @@ $SALT_MASTER    saltmaster
 echo "$HOSTNAME" > /etc/hostname
 hostname `cat /etc/hostname`
 
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
-
-killall salt-minion || true
-
 echo "------> Bootstrapping minion $HOSTNAME (master: $SALT_MASTER) for environment $ENV"
 echo "--------> Roles: $ROLES"
 
@@ -41,14 +36,6 @@ __apt_get_noinput() {
 apt-get update
 __apt_get_noinput python-software-properties curl debconf-utils
 apt-get update
-
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
-#
-# Eventually, we can come to settle down on our own way of bootstrapping
-(
-  curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
-)
 
 # Set the hostname
 echo """
@@ -79,4 +66,10 @@ do
   echo "  - ${i}" >> /etc/salt/grains
 done
 
-restart salt-minion || start salt-minion || true
+# We're using the saltstack canonical bootstrap method here to stay with the
+# latest open-source efforts
+#
+# Eventually, we can come to settle down on our own way of bootstrapping
+(
+  curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
+)

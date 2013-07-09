@@ -15,17 +15,6 @@ __apt_get_noinput() {
 apt-get update -y
 __apt_get_noinput python-software-properties curl debconf-utils
 
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
-
-killall salt-master || true
-killall salt-minion || true
-
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
-#
-# Eventually, we can come to settle down on our own way of bootstrapping
-curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
 
 # Set the hostname
 echo """
@@ -111,5 +100,8 @@ respawn limit 5 20
 exec salt-minion -d
 """ > /etc/init/salt-minion.conf
 
-restart salt-master || start salt-master || true
-restart salt-minion || start salt-minion || true
+# We're using the saltstack canonical bootstrap method here to stay with the
+# latest open-source efforts
+#
+# Eventually, we can come to settle down on our own way of bootstrapping
+curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
