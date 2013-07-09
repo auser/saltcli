@@ -47,7 +47,7 @@ apt-get update
 #
 # Eventually, we can come to settle down on our own way of bootstrapping
 (
-  curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
+  exec curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
 )
 
 # Set the hostname
