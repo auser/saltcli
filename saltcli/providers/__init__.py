@@ -67,6 +67,14 @@ class Provider(object):
       execute(highstate)
     else:
       self.environment.debug("There was an error finding any instances")
+  
+  def cmdrun(self, instances, command):
+    @parallel
+    def _cmdrun():
+      sudo("salt-call cmd.run {0}".format(command))
+      
+    env = build_fabric_env(instances)
+    execute(_cmdrun)
     
   ## PRIVATE
   def bootstrap(self, instances):

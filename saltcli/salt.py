@@ -18,4 +18,4 @@ def known_providers():
 
 def known_commands():
   """All known commands"""
-  return ('launch', 'list', 'teardown', 'ssh', 'upload', 'bootstrap', 'highstate', 'key', 'role', 'overstate', 'empty')
+  return ('cmdrun', 'launch', 'list', 'teardown', 'ssh', 'upload', 'bootstrap', 'highstate', 'key', 'role', 'overstate', 'empty')
