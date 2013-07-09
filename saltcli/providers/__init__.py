@@ -68,12 +68,15 @@ class Provider(object):
     else:
       self.environment.debug("There was an error finding any instances")
   
-  def cmdrun(self, instances, command):
+  ## Run a command
+  def cmdrun(self, command):
+    names = self.environment.instances.keys()
+    instance_names = ["*{0}*".format(name) for name in names]
     @parallel
     def _cmdrun():
-      sudo("salt-call cmd.run {0}".format(command))
-      
-    env = build_fabric_env(instances)
+      sudo("salt -C '{0}' cmd.run {1}".format(" or ".join(instance_names), command))
+    
+    env = build_fabric_env(self.environment.master_server())
     execute(_cmdrun)
     
   ## PRIVATE

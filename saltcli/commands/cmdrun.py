@@ -5,5 +5,8 @@ class Cmdrun(Command):
     super(Cmdrun, self).__init__(environment)
 
   def run(self):
-    print self.config
-    # self.environment.provider.highstate(self.environment.instances)
+    command = self.environment.opts['__args']
+    if command is None:
+      print "You must pass a command to run"
+    else:
+      self.environment.provider.cmdrun(command)
