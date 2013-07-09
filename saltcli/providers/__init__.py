@@ -41,11 +41,11 @@ class Provider(object):
       instances = instances.values()
       salt_dir = os.path.join(os.getcwd(), "deploy", "salt/")
       instances[0].environment.master_server().upload(salt_dir, "/srv/salt")
-              
+      
       @parallel
       def highstate():
         sudo("salt-call state.highstate")
-      
+
       env = build_fabric_env(instances)
       execute(self._prepare_for_highstate)
       execute(highstate)
@@ -108,6 +108,9 @@ class Provider(object):
         )
         instance.environment.debug("Running bootstrap_script: {0}".format(script))
         sudo(script)
+        if instance.ismaster():
+          sudo("restart salt-master")
+        sudo("restart salt-minion")
     
       ## Run bootstrap script
       execute(bootstrap_script)
