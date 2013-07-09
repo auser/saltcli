@@ -21,15 +21,11 @@ __apt_get_noinput python-software-properties curl debconf-utils
 killall salt-master || true
 killall salt-minion || true
 
+# We're using the saltstack canonical bootstrap method here to stay with the
+# latest open-source efforts
+#
 # Eventually, we can come to settle down on our own way of bootstrapping
-(
-  # curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
-  add-apt-repository ppa:saltstack/salt -y
-  apt-get update -y
-  apt-get install salt-minion -y
-  apt-get install salt-master -y
-  apt-get upgrade -y
-)
+curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
 
 # Set the hostname
 echo """

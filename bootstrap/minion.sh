@@ -31,15 +31,33 @@ hostname `cat /etc/hostname`
 
 killall salt-minion || true
 
+echo "------> Bootstrapping minion $HOSTNAME (master: $SALT_MASTER) for environment $ENV"
+echo "--------> Roles: $ROLES"
+
+__apt_get_noinput() {
+    apt-get install -y -o DPkg::Options::=--force-confold $@
+}
+
+apt-get update
+__apt_get_noinput python-software-properties curl debconf-utils
+apt-get update
+
+# We're using the saltstack canonical bootstrap method here to stay with the
+# latest open-source efforts
+#
 # Eventually, we can come to settle down on our own way of bootstrapping
 (
-  # curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
-  add-apt-repository ppa:saltstack/salt -y
-  apt-get update -y
-  apt-get install salt-minion -y
-  apt-get install salt-master -y
-  apt-get upgrade -y
+  curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
 )
+
+# Set the hostname
+echo """
+127.0.0.1       localhost
+127.0.1.1       $HOSTNAME
+$SALT_MASTER    saltmaster
+""" > /etc/hosts
+echo "$HOSTNAME" > /etc/hostname
+hostname `cat /etc/hostname`
 
 # Set salt master location and start minion
 echo """
