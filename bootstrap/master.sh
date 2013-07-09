@@ -111,5 +111,5 @@ respawn limit 5 20
 exec salt-minion -d
 """ > /etc/init/salt-minion.conf
 
-salt-master -d || true
-salt-minion -d || true
+restart salt-master || start salt-master || true
+restart salt-minion || start salt-minion || true

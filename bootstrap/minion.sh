@@ -79,4 +79,4 @@ do
   echo "  - ${i}" >> /etc/salt/grains
 done
 
-salt-minion -d || true
+restart salt-minion || start salt-minion || true
