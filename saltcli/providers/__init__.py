@@ -202,6 +202,9 @@ class Provider(object):
     if not 'region' in config:
       config['region'] = 'us-east-1'
     
+    if not 'availability_zone' in config:
+      config['availability_zone'] = 'us-east-1'
+    
     if config['keyname'][0] == "/":
       config['key_file'] = config['keyname']
     else:
@@ -222,7 +225,7 @@ class Provider(object):
     try:
       machine_config = dict_merge(machines[name], default)
     except Exception, e:
-      print "ECEPTION: {0}".format(e)
+      print "EXCEPTION: {0}".format(e)
       machine_config = default
     
     return machine_config

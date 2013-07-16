@@ -45,17 +45,19 @@ class Aws(Provider):
     colors = get_colors()
     
     print """Launching an AWS instance:
-    Image:          {color}{image_id}{colors[ENDC]}
-    Keyname:        {color}{key_name}{colors[ENDC]}
-    security_group: {color}{security_group}{colors[ENDC]}
-    flavor:         {color}{flavor}{colors[ENDC]}
-    placement:      {color}{placement}{colors[ENDC]}
+    Image:              {color}{image_id}{colors[ENDC]}
+    Keyname:            {color}{key_name}{colors[ENDC]}
+    security_group:     {color}{security_group}{colors[ENDC]}
+    flavor:             {color}{flavor}{colors[ENDC]}
+    placement:          {color}{placement}{colors[ENDC]}
+    availability_zone:  {color}{availability_zone}{colors[ENDC]}
     """.format(
       image_id=launch_config['image_id'],
       key_name=keypair,
       security_group=security_group.name,
       flavor=launch_config['flavor'],
       placement=conn.region,
+      availability_zone=launch_config['availability_zone'],
       color=colors['YELLOW'],
       colors=colors
     )
@@ -64,6 +66,7 @@ class Aws(Provider):
                               key_name=keypair,
                               security_groups=[security_group.name],
                               instance_type=launch_config['flavor'],
+                              placement=launch_config['availability_zone'],
                               )
     except boto.exception.EC2ResponseError as e:
       print "Exception: {0}".format(e)
@@ -320,6 +323,8 @@ Please check your permissions and try again.
   def keypair_name(self, conn):
     if isinstance(conn, Instance):
       conn = self._load_connection_for_instance(conn)
+    if conn is None:
+      conn = self.conn
     return "{0}-{1}".format(conn.region.name, self.config['keyname'])
     
   def key_filename(self, conn):
@@ -376,6 +381,7 @@ Please check your permissions and try again.
     machines = self.config['machines']
     default_aws_config = {
       'region': 'us-east-1',
+      'availability_zone': 'us-east-1b',
     }
     default = dict_merge(machines['default'], default_aws_config)
     try:

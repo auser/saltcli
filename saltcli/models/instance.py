@@ -10,7 +10,8 @@ class Instance(object):
   ## Get this instance
   def get(self):
     self.raw_instance = self.environment.provider.get(self.instance_name)
-    return self.raw_instance['instance']
+    if self.raw_instance is not None:
+      return self.raw_instance['instance']
     
   ## Keyname
   def keyname(self):
