@@ -10,7 +10,8 @@ class List(Command):
     """Launch"""
     instances = self.environment.provider.all()
     if len(instances) > 0:
-      for inst in instances:
+      for inst_d in instances:
+        inst = inst_d['instance']
         print """{name}:
     id: {id}
     ip_address: {ip}
@@ -18,7 +19,7 @@ class List(Command):
     environment: {environment}""".format( id=inst.id, 
                     ip=inst.ip_address, 
                     name=inst.tags.get('instance_name', None), 
-                    placement=inst.placement,
+                    placement=inst_d['region_name'],
                     environment=inst.tags.get('environment', None))
     else:
       colors = get_colors()

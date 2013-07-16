@@ -9,14 +9,16 @@ class Instance(object):
     
   ## Get this instance
   def get(self):
-    return self.environment.provider.get(self.instance_name)
+    self.raw_instance = self.environment.provider.get(self.instance_name)
+    return self.raw_instance['instance']
     
   ## Keyname
   def keyname(self):
-    return self.environment.provider.config.get('keyname', None)
+    return self.environment.provider.keypair_name(self)
     
   def key_filename(self):
-    return self.environment.provider.config.get('key_file', None)
+    # return self.environment.provider.config.get('key_file', None)
+    return self.environment.provider.key_filename(self)
     
   def ssh_username(self):
     return self.environment.provider.config.get('ssh_username', 'root')

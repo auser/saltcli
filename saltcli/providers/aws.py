@@ -5,6 +5,7 @@ from stat import *
 import xml.etree.ElementTree as ET
 from saltcli.utils.utils import get_colors
 from saltcli.providers import Provider, dict_merge
+from saltcli.models.instance import Instance
 import collections
 
 SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", "from_port", "to_port", "cidr_ip", "src_group_name"])
@@ -51,7 +52,7 @@ class Aws(Provider):
     placement:      {color}{placement}{colors[ENDC]}
     """.format(
       image_id=launch_config['image_id'],
-      key_name=instance.keyname(),
+      key_name=keypair,
       security_group=security_group.name,
       flavor=launch_config['flavor'],
       placement=conn.region,
@@ -60,7 +61,7 @@ class Aws(Provider):
     )
     try:
       reservation = conn.run_instances(launch_config['image_id'], 
-                              key_name=instance.keyname(),
+                              key_name=keypair,
                               security_groups=[security_group.name],
                               instance_type=launch_config['flavor'],
                               )
@@ -79,12 +80,22 @@ class Aws(Provider):
     instance.environment.info("Instance {0} launched at {1}".format(running_instance.id, running_instance.ip_address))
     
     if status == 'running':
+      instance.environment.debug("""
+Adding tags:
+  name: {color}{name}{endcolor}
+  instance_name: {color}{instance_name}{endcolor}
+  environment: {color}{environment}{endcolor}
+      """.format( name=instance.name, 
+                  instance_name=instance.instance_name, 
+                  environment=instance.environment.environment,
+                  color=colors['YELLOW'],
+                  endcolor=colors['ENDC']))
       running_instance.add_tag("name", instance.name)
       running_instance.add_tag('instance_name', instance.instance_name)
       running_instance.add_tag('environment', instance.environment.environment)
     else:
       print "Instance status: {0}".format(status)
-      
+    
     return instance
       
   
@@ -95,7 +106,6 @@ class Aws(Provider):
       instance.environment.debug("{0}Tearing down instance: {1}{2[ENDC]}".format(
         colors['GREEN'], instance.instance_name, colors))
       conn = self._load_connection_for_instance(instance)
-      print "---> {0}".format(conn)
       conn.terminate_instances([instance.get().id])
       if not instance.ismaster():
         self.remove_minion_key(instance)
@@ -113,7 +123,7 @@ class Aws(Provider):
       
   def _get_by_name(self, name):
     for inst in self.all():
-      if name == inst.tags.get('instance_name', None):
+      if name == inst['instance'].tags.get('instance_name', None):
         return inst
     return None
     
@@ -127,14 +137,20 @@ class Aws(Provider):
       for res in reservations:
         for inst in res.instances:
           if inst.key_name == self.keypair_name(c) and inst.update() == 'running':
-            running_instances.append(inst)
+            inst_d = {
+              'instance': inst,
+              'region_name': name,
+              'conn': c,
+              'tags': inst.tags
+            }
+            running_instances.append(inst_d)
     return running_instances
     
   ## All the names of every instance
   def all_names(self):
     running_instance_names = []
     for i in self.all():
-      running_instance_names.append(i.tags['name'])
+      running_instance_names.append(i['instance'].tags['name'])
     return running_instance_names
     
   # Set up the keypair
@@ -143,7 +159,6 @@ class Aws(Provider):
     key_path = instance.key_filename()
     keypair = self._get_keypair(conn)
     
-    print "keypair: {0}".format(keypair)
     if keypair:
       if not os.path.exists(self.config['key_file']):
         colors = get_colors()
@@ -166,15 +181,15 @@ Please check your permissions and try again.
         instance.environment.debug(
           "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
             old=keypair.region.name,
-            curr=conn.region,
+            curr=conn.region.name,
           )
         )
-        key = keypair.copy_to_region(conn.region)
+        # key = keypair.copy_to_region(conn.region)
+        key = self._create_keypair(instance, conn)
         # key_path = instance.key_filename()
         # filepath = os.path.dirname(key_path)
         # key.save(filepath)
         # os.chmod(key_path, 0600)
-        print "keypair: {0}".format(key)
     else:
       self._create_keypair(instance, conn)
     
@@ -200,11 +215,7 @@ Please check your permissions and try again.
           keypairs.append(k)
     
     return keypairs
-    
-  # Convenience method to get the keypair
-  def keypair_name(self, conn):
-    return "{0}-{1}".format(conn.region.name, self.config['keyname'])
-    
+        
   ## Create a keypair per instance
   def _create_keypair(self, instance, conn):
     try:
@@ -215,11 +226,10 @@ Please check your permissions and try again.
       instance.environment.debug("Saving key to {0}".format(key_path))
       key.save(filepath)
       os.chmod(key_path, 0600)
+      return key
     except Exception, e:
       instance.environment.debug("Keypair exception '%s'..."%(e))
-      True
-    
-    return key
+      return None
     
   ## Create the security group and attach the appropriate permissions
   def _setup_security_group(self, instance, launch_config):
@@ -231,7 +241,7 @@ Please check your permissions and try again.
       conn = self.conn
     
     ## Now that we have our connection...
-    group_name = instance.keyname() + "-" + instance.instance_name
+    group_name = self.keypair_name(conn) + "-" + instance.instance_name
     groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
     group = groups[0] if groups else None
     if not group:
@@ -305,26 +315,39 @@ Please check your permissions and try again.
       """Revoke `rule` on `group`."""
       return self._modify_sg(conn, group, rule, revoke=True)
   
-  
+  # Convenience method to get the keypair
+  # TODO: Move this into the parent class
+  def keypair_name(self, conn):
+    if isinstance(conn, Instance):
+      conn = self._load_connection_for_instance(conn)
+    return "{0}-{1}".format(conn.region.name, self.config['keyname'])
+    
+  def key_filename(self, conn):
+    key_dir = self.config['key_dir']
+    return os.path.join(key_dir, "{0}.pem".format(self.keypair_name(conn)))
+    
   ## Load conn for instance
   def _load_connection_for_instance(self, instance):
-    return self._load_connection_for_region(instance.placement())
+    for inst_d in self.all():
+      if inst_d['tags']['name'] == instance.name:
+        return inst_d['conn']
+    return None
   
   ## Setup connection
   def _load_connection(self, **kwargs):
     """Load connection"""
     self._load_credentials()
+    new_kwargs = kwargs.copy()
     if 'region' in kwargs:
-      kwargs['region'] = boto.ec2.get_region(kwargs['region'])
+      new_kwargs['region'] = boto.ec2.get_region(kwargs['region'])
     else:
-      kwargs['region'] = boto.ec2.get_region(self.config['region'])
+      new_kwargs['region'] = boto.ec2.get_region(self.config['region'])
     
-    self.conn = boto.connect_ec2(self.access_key, self.secret_key, **kwargs)
+    self.conn = boto.connect_ec2(self.access_key, self.secret_key, **new_kwargs)
     return self.conn
     
   ## Setup connections
   def _load_connection_for_region(self, region_name, **kwargs):
-    print "region_name: {0} ({1})".format(region_name, self._conns.keys())
     if not region_name in self._conns:
       self._conns[region_name] = self._load_connection(region=region_name)
     

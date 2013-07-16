@@ -209,6 +209,7 @@ class Provider(object):
         key_dir = config['key_dir']
       else:
         key_dir = os.path.join(os.environ['HOME'], ".ec2")
+      config['key_dir'] = key_dir
       config['key_file'] = os.path.join(key_dir, "{0}-{1}.pem".format(config['region'], config['keyname']))
       
     return config
