@@ -14,9 +14,11 @@ class List(Command):
         print """{name}:
     id: {id}
     ip_address: {ip}
+    placement: {placement}
     environment: {environment}""".format( id=inst.id, 
                     ip=inst.ip_address, 
                     name=inst.tags.get('instance_name', None), 
+                    placement=inst.placement,
                     environment=inst.tags.get('environment', None))
     else:
       colors = get_colors()

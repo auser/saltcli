@@ -18,6 +18,7 @@ class Provider(object):
     config = self._build_provider_config(config)
     self.config = config
     self.ssh = Ssh(config)
+    self._conns = {}
     
   def launch(self, conf={}):
     pass
@@ -198,6 +199,9 @@ class Provider(object):
     return None
     
   def _build_provider_config(self, config):
+    if not 'region' in config:
+      config['region'] = 'us-east-1'
+    
     if config['keyname'][0] == "/":
       config['key_file'] = config['keyname']
     else:
@@ -205,11 +209,8 @@ class Provider(object):
         key_dir = config['key_dir']
       else:
         key_dir = os.path.join(os.environ['HOME'], ".ec2")
-      config['key_file'] = os.path.join(key_dir, "{0}.pem".format(config['keyname']))
+      config['key_file'] = os.path.join(key_dir, "{0}-{1}.pem".format(config['region'], config['keyname']))
       
-    if not 'region' in config:
-      config['region'] = 'us-east-1'
-    
     return config
     
   ## Local the machine config based on the config file

@@ -55,6 +55,9 @@ class Instance(object):
   def private_ip_address(self):
     return self.get().private_ip_address
   
+  def placement(self):
+    return self.get().placement
+  
   ## Upload
   def upload(self, local_file, remote_file):
     self.environment.ssh.upload(self, local_file, remote_file)

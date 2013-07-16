@@ -12,7 +12,8 @@ SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", 
 class Aws(Provider):
   def __init__(self, environment, config):
     super(Aws, self).__init__(environment, config)
-    self._load_connection()
+    self._load_conns()
+    # self._load_connection()
     
   ## Public methods
   def launch(self, instances):
@@ -29,14 +30,17 @@ class Aws(Provider):
         self.ssh.wait_for_ssh(instance.ip_address(), instance.ssh_port())
     
   ## Launch a single instance
+  ## This will take the configuration
   def launch_single_instance(self, instance):
     launch_config = self._load_machine_desc(instance.name)
     ## RELOAD the ec2 connection based on a new region
-    if self.config['region'] != self.conn.region:
-      self._load_connection(region=self.config['region'])
+    if 'region' in launch_config:
+      conn = self._load_connection_for_region(launch_config['region'])
+    elif self.config['region'] != self.conn.region:
+      conn = self._load_connection_for_region(self.config['region'])
     
     security_group = self._setup_security_group(instance, launch_config)
-    keypair = self._setup_keypair(instance, launch_config)
+    keypair = self._setup_keypair(instance, conn, launch_config)
     colors = get_colors()
     
     print """Launching an AWS instance:
@@ -50,12 +54,12 @@ class Aws(Provider):
       key_name=instance.keyname(),
       security_group=security_group.name,
       flavor=launch_config['flavor'],
-      placement=self.conn.region,
+      placement=conn.region,
       color=colors['YELLOW'],
       colors=colors
     )
     try:
-      reservation = self.conn.run_instances(launch_config['image_id'], 
+      reservation = conn.run_instances(launch_config['image_id'], 
                               key_name=instance.keyname(),
                               security_groups=[security_group.name],
                               instance_type=launch_config['flavor'],
@@ -69,7 +73,7 @@ class Aws(Provider):
     # Check up on its status every so often
     instance.environment.debug("{0}Launched. Waiting for the instance to become available.{1[ENDC]}".format(colors['YELLOW'], colors))
     status = running_instance.update()
-    while status == 'pending':
+    while status == 'pending' or running_instance.ip_address is None:
         time.sleep(10)
         status = running_instance.update()
     instance.environment.info("Instance {0} launched at {1}".format(running_instance.id, running_instance.ip_address))
@@ -90,7 +94,9 @@ class Aws(Provider):
     if instance:
       instance.environment.debug("{0}Tearing down instance: {1}{2[ENDC]}".format(
         colors['GREEN'], instance.instance_name, colors))
-      self.conn.terminate_instances([instance.get().id])
+      conn = self._load_connection_for_instance(instance)
+      print "---> {0}".format(conn)
+      conn.terminate_instances([instance.get().id])
       if not instance.ismaster():
         self.remove_minion_key(instance)
     else:
@@ -111,14 +117,17 @@ class Aws(Provider):
         return inst
     return None
     
+  ## Get the list of running instances for this cluster
+  ## this is raw data, not instance objects
   def all(self):
     """List instances"""
     running_instances = []
-    reservations = self.conn.get_all_instances()
-    for res in reservations:
-      for inst in res.instances:
-        if inst.key_name == self.keypair_name() and inst.update() == 'running':
-          running_instances.append(inst)
+    for name, c in self._conns.items():
+      reservations = c.get_all_instances()
+      for res in reservations:
+        for inst in res.instances:
+          if inst.key_name == self.keypair_name(c) and inst.update() == 'running':
+            running_instances.append(inst)
     return running_instances
     
   ## All the names of every instance
@@ -130,9 +139,11 @@ class Aws(Provider):
     
   # Set up the keypair
   # This will look at the key_filename
-  def _setup_keypair(self, instance, launch_config):
+  def _setup_keypair(self, instance, conn, launch_config):
     key_path = instance.key_filename()
-    keypair = self._get_keypair()
+    keypair = self._get_keypair(conn)
+    
+    print "keypair: {0}".format(keypair)
     if keypair:
       if not os.path.exists(self.config['key_file']):
         colors = get_colors()
@@ -141,7 +152,7 @@ class Aws(Provider):
         Attempting to recreate...
         """.format(key_file=self.config['key_file'], color=colors['RED'], colors=colors))
         keypair.delete()
-        keypair = self._create_keypair(instance)
+        keypair = self._create_keypair(instance, conn)
       
       st = os.stat(key_path).st_mode
       mode = oct(S_IMODE(os.stat(key_path).st_mode))
@@ -151,44 +162,57 @@ The key {0} does not have the proper permissions ({1}).
 Please check your permissions and try again.
         """.format(key_path, mode))
       
-      if keypair.region != self.conn.region:
+      if keypair.region != conn.region:
         instance.environment.debug(
           "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
             old=keypair.region.name,
-            curr=self.conn.region,
+            curr=conn.region,
           )
         )
-        output = keypair.copy_to_region(self.conn.region)
-        print "keypair: {0}".format(output)
+        key = keypair.copy_to_region(conn.region)
+        # key_path = instance.key_filename()
+        # filepath = os.path.dirname(key_path)
+        # key.save(filepath)
+        # os.chmod(key_path, 0600)
+        print "keypair: {0}".format(key)
     else:
-      self._create_keypair(instance)
+      self._create_keypair(instance, conn)
     
-    return self.keypair_name()
+    return self.keypair_name(conn)
     
   ## Get keypairs
-  def _get_keypair(self):
-    if self.keypair_name() in [k.name for k in self._all_keypairs()]:
-      for k in self._all_keypairs():
-        if k.name == self.keypair_name():
+  def _get_keypair(self, conn):
+    if self.keypair_name(conn) in [k.name for k in self._all_keypairs(conn)]:
+      for k in self._all_keypairs(conn):
+        if k.name == self.keypair_name(conn):
           return k
           
     return None
     
   ## ALL KEYPAIRS
-  def _all_keypairs(self):
-    return self.conn.get_all_key_pairs()
+  def _all_keypairs(self, conn):
+    # return conn.get_all_key_pairs()
+    keypairs = []
+    for name, c in self._conns.items():
+      res = c.get_all_key_pairs()
+      for k in res:
+        if k not in keypairs:
+          keypairs.append(k)
+    
+    return keypairs
     
   # Convenience method to get the keypair
-  def keypair_name(self):
-    return self.config['keyname']
+  def keypair_name(self, conn):
+    return "{0}-{1}".format(conn.region.name, self.config['keyname'])
     
   ## Create a keypair per instance
-  def _create_keypair(self, instance):
+  def _create_keypair(self, instance, conn):
     try:
       key_path = instance.key_filename()
       ## Attempting to create_key_pair
-      key   = self.conn.create_key_pair(self.keypair_name())
+      key   = conn.create_key_pair(self.keypair_name(conn))
       filepath = os.path.dirname(key_path)
+      instance.environment.debug("Saving key to {0}".format(key_path))
       key.save(filepath)
       os.chmod(key_path, 0600)
     except Exception, e:
@@ -199,12 +223,20 @@ Please check your permissions and try again.
     
   ## Create the security group and attach the appropriate permissions
   def _setup_security_group(self, instance, launch_config):
+    conn = None
+    
+    if 'region' in launch_config:
+      conn = self._load_connection_for_region(launch_config['region'])
+    else:
+      conn = self.conn
+    
+    ## Now that we have our connection...
     group_name = instance.keyname() + "-" + instance.instance_name
-    groups = [g for g in self.conn.get_all_security_groups() if g.name == group_name]
+    groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
     group = groups[0] if groups else None
     if not group:
       instance.environment.debug("Creating group '%s'..."%(group_name,))
-      group = self.conn.create_security_group(group_name, "A group for %s"%(group_name,))
+      group = conn.create_security_group(group_name, "A group for %s"%(group_name,))
     
     expected_rules = []
     if 'ports' in launch_config:
@@ -233,20 +265,20 @@ Please check your permissions and try again.
                           None)
                           
       if current_rule not in expected_rules:
-        self._revoke(group, current_rule)
+        self._revoke(group, conn, current_rule)
       else:
         current_rules.append(current_rule)
           
     for rule in expected_rules:
       if rule not in current_rules:
-        self._authorize(group, rule)
+        self._authorize(group, conn, rule)
     
     return group
   
-  def _modify_sg(self, group, rule, authorize=False, revoke=False):
+  def _modify_sg(self, conn, group, rule, authorize=False, revoke=False):
       src_group = None
       if rule.src_group_name:
-          src_group = self.conn.get_all_security_groups([rule.src_group_name,])[0]
+          src_group = conn.get_all_security_groups([rule.src_group_name,])[0]
  
       if authorize and not revoke:
           print "Authorizing missing rule %s..."%(rule,)
@@ -264,15 +296,19 @@ Please check your permissions and try again.
                        src_group=src_group)
  
  
-  def _authorize(self, group, rule):
+  def _authorize(self, group, conn, rule):
       """Authorize `rule` on `group`."""
-      return self._modify_sg(group, rule, authorize=True)
+      return self._modify_sg(conn, group, rule, authorize=True)
  
  
-  def _revoke(self, group, rule):
+  def _revoke(self, group, conn, rule):
       """Revoke `rule` on `group`."""
-      return self._modify_sg(group, rule, revoke=True)
+      return self._modify_sg(conn, group, rule, revoke=True)
   
+  
+  ## Load conn for instance
+  def _load_connection_for_instance(self, instance):
+    return self._load_connection_for_region(instance.placement())
   
   ## Setup connection
   def _load_connection(self, **kwargs):
@@ -284,6 +320,33 @@ Please check your permissions and try again.
       kwargs['region'] = boto.ec2.get_region(self.config['region'])
     
     self.conn = boto.connect_ec2(self.access_key, self.secret_key, **kwargs)
+    return self.conn
+    
+  ## Setup connections
+  def _load_connection_for_region(self, region_name, **kwargs):
+    print "region_name: {0} ({1})".format(region_name, self._conns.keys())
+    if not region_name in self._conns:
+      self._conns[region_name] = self._load_connection(region=region_name)
+    
+    return self._conns[region_name]
+    
+  ## Load all the connections we know about
+  def _load_conns(self):
+    regions = []
+    
+    def _recursive_load_region(dictionary={}):
+      for k, v in dictionary.items():
+        if isinstance(v, dict):
+          _recursive_load_region(v)
+        else:
+          if k == "region" and v not in regions:
+            regions.append(v)
+            self._load_connection_for_region(v)
+        
+    for dictionary in [self.config['machines'], self.config]:
+      _recursive_load_region(dictionary)
+    
+    return regions
     
   def _load_machine_desc(self, name):
     """Load machine descriptions"""
