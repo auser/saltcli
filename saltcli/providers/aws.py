@@ -76,7 +76,10 @@ class Aws(Provider):
     running_instance = reservation.instances[0] #### <~ ew
     # Check up on its status every so often
     instance.environment.debug("{0}Launched. Waiting for the instance to become available.{1[ENDC]}".format(colors['YELLOW'], colors))
-    status = running_instance.update()
+    try:
+      status = running_instance.update()
+    except:
+      True
     while status == 'pending' or running_instance.ip_address is None:
         time.sleep(10)
         status = running_instance.update()
@@ -117,12 +120,13 @@ Adding tags:
         colors['RED'], instance.name, colors))
       
   def get(self, name):
+    print "GET: {0}".format(str(name))
     if isinstance(name, str):
       return self._get_by_name(name)
     elif isinstance(name, Instance):
       return self._get_by_name(name.instance_name)
     else:
-      print name
+      return None
       
   def _get_by_name(self, name):
     for inst in self.all():

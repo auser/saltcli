@@ -191,13 +191,23 @@ class Provider(object):
       working_dir = os.getcwd()
       args = [os.path.join(working_dir, "deploy", "salt/")]
     self.ssh.upload(inst, *args)
-    
+
+
+  ## Select the master machine for this cluster
   def _master_server(self):
     for inst in self.all():
       if inst.tags['instance_name'] == "master":
         return inst
     return None
     
+  def _get_instance_roles(self, instance_name):
+    inst_d = self.get(str(instance_name))
+    if inst_d is not None:
+      print "inst_d: {0}".format(inst_d)
+      self.ssh.run_command(inst_d['instance'], 
+      "sudo salt-call grains.item roles")
+
+  ## Build a profile config
   def _build_provider_config(self, config):
     if not 'region' in config:
       config['region'] = 'us-east-1'

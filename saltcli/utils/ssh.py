@@ -29,11 +29,14 @@ class Ssh(object):
     
   def run_command(self, inst, cmd, obj={}):
     env = self._env(inst)
-    def _run_command():
-      run("{0}".format(cmd))
-      
-    print "hosts: {0}".format(env)
-    execute(_run_command, hosts=env.hosts)
+    cmd = 'ssh {user}@{host} {opts} {cmd}'.format(
+      user = env.user,
+      host = env.hosts[0],
+      opts=self._ssh_opts_str(env),
+      cmd=cmd
+    )
+    print "Running: {0}".format(cmd)
+    call(cmd, shell=True)
     
   def sudo_command(self, inst, cmd, obj={}):
     env = self._env(inst)
