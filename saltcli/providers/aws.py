@@ -20,6 +20,7 @@ class Aws(Provider):
   def launch(self, instances):
     if not isinstance(instances, dict):
       instances = [instances]
+    launched_instances = {}
     for name, inst in instances.iteritems():
       launch_config = self._load_machine_desc(name)
       security_group = self._setup_security_group(inst, launch_config)
@@ -29,6 +30,12 @@ class Aws(Provider):
       else:
         instance = self.launch_single_instance(inst)
         self.ssh.wait_for_ssh(instance.ip_address(), instance.ssh_port())
+        launched_instances[name] = instance
+    return launched_instances
+
+  def launch_and_bootstrap(self, instances):
+    launched_instances = self.launch(instances)
+    self.bootstrap(launched_instances)
     
   ## Launch a single instance
   ## This will take the configuration
@@ -120,7 +127,6 @@ Adding tags:
         colors['RED'], instance.name, colors))
       
   def get(self, name):
-    print "GET: {0}".format(str(name))
     if isinstance(name, str):
       return self._get_by_name(name)
     elif isinstance(name, Instance):
@@ -157,7 +163,8 @@ Adding tags:
   def all_names(self):
     running_instance_names = []
     for i in self.all():
-      running_instance_names.append(i['instance'].tags['name'])
+      if 'name' in i['instance'].tags:
+        running_instance_names.append(i['instance'].tags['name'])
     return running_instance_names
     
   # Set up the keypair
@@ -338,7 +345,7 @@ Please check your permissions and try again.
   ## Load conn for instance
   def _load_connection_for_instance(self, instance):
     for inst_d in self.all():
-      if inst_d['tags']['name'] == instance.name:
+      if inst_d['tags'] and 'name' in inst_d['tags'] and inst_d['tags']['name'] == instance.name:
         return inst_d['conn']
     return None
   

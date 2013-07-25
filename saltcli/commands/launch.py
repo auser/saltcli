@@ -8,6 +8,6 @@ class Launch(Command):
     
   def run(self):
     """Launch"""
-    self.provider.launch(self.environment.instances)
-    self.provider.bootstrap(self.environment.instances)
+    self.provider.launch_and_bootstrap(self.environment.instances)
+    # self.provider.bootstrap(self.environment.instances)
     

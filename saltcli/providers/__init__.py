@@ -34,8 +34,11 @@ class Provider(object):
     
   @parallel
   def _prepare_for_highstate(self):
-    sudo("salt-call saltutil.sync_all")
-    sudo("salt-call mine.update")
+    try:
+      sudo("salt-call saltutil.sync_all")
+      sudo("salt-call mine.update")
+    except Exception, e: 
+      print "There was an error preparing for highstate: {0}".format(e)
     
   def highstate(self, instances):
     if instances:
