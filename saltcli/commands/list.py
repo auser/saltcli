@@ -13,7 +13,6 @@ class List(Command):
       for inst_d in instances:
         inst = inst_d['instance']
         print """{name}:
-    name: {inst_name}
     id: {id}
     ip_address: {ip}
     region: {placement}
@@ -21,7 +20,6 @@ class List(Command):
     environment: {environment}""".format( id=inst.id, 
                     ip=inst.ip_address, 
                     name=inst.tags.get('name', None),
-                    inst_name=inst.tags.get('instance_name', None), 
                     placement=inst_d['region_name'],
                     az=inst.placement,
                     environment=inst.tags.get('environment', None))
