@@ -7,4 +7,12 @@ class Role(Command):
     
   def run(self):
     """Role"""
-    print "NOT YET IMPLEMENTED"
+    roles = {}
+    for inst in self.environment.instances:
+      roles[inst] = self.environment.provider._get_instance_roles(inst)
+
+    for name, roles in roles.items():
+      print "{name}:".format(name=name)
+      for _roles, arr in roles.items():
+        for r in arr:
+          print "       {r}".format(r=r)

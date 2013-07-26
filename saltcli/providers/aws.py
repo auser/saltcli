@@ -14,6 +14,8 @@ class Aws(Provider):
   def __init__(self, environment, config):
     super(Aws, self).__init__(environment, config)
     self._load_conns()
+    # Load the running instances
+    self.running_instances = None
     # self._load_connection()
     
   ## Public methods
@@ -136,7 +138,7 @@ Adding tags:
       
   def _get_by_name(self, name):
     for inst in self.all():
-      if name == inst['instance'].tags.get('instance_name', None):
+      if name == inst['instance'].tags.get('instance_name', None) or name == inst['instance'].tags.get('name', None):
         return inst
     return None
     
@@ -144,20 +146,24 @@ Adding tags:
   ## this is raw data, not instance objects
   def all(self):
     """List instances"""
-    running_instances = []
-    for name, c in self._conns.items():
-      reservations = c.get_all_instances()
-      for res in reservations:
-        for inst in res.instances:
-          if inst.key_name == self.keypair_name(c) and inst.update() == 'running':
-            inst_d = {
-              'instance': inst,
-              'region_name': name,
-              'conn': c,
-              'tags': inst.tags
-            }
-            running_instances.append(inst_d)
-    return running_instances
+    if self.running_instances is None:
+      running_instances = []
+      for name, c in self._conns.items():
+        reservations = c.get_all_instances()
+        for res in reservations:
+          for inst in res.instances:
+            if inst.key_name == self.keypair_name(c) and inst.update() == 'running':
+              inst_d = {
+                'instance': inst,
+                'instance_obj': Instance(inst.tags['name'], {}, self.environment),
+                'ip': inst.ip_address,
+                'region_name': name,
+                'conn': c,
+                'tags': inst.tags
+              }
+              running_instances.append(inst_d)
+      self.running_instances = running_instances
+    return self.running_instances
     
   ## All the names of every instance
   def all_names(self):

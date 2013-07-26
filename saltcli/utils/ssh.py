@@ -1,5 +1,5 @@
 from fabric.api import run, env, put, local, sudo, cd
-from subprocess import call
+from subprocess import call, Popen, PIPE
 from fabric.tasks import execute
 from fabric.operations import open_shell
 from saltcli.utils.utils import build_fabric_env
@@ -35,8 +35,8 @@ class Ssh(object):
       opts=self._ssh_opts_str(env),
       cmd=cmd
     )
-    print "Running: {0}".format(cmd)
-    call(cmd, shell=True)
+    pipe = Popen([cmd], shell=True, stdout=PIPE, close_fds=True).stdout
+    return pipe.read(4098)
     
   def sudo_command(self, inst, cmd, obj={}):
     env = self._env(inst)

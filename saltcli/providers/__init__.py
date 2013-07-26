@@ -7,6 +7,7 @@ from saltcli.utils import utils
 from saltcli.utils.utils import build_fabric_env
 from saltcli.utils.utils import get_colors
 import os, sys, time
+import yaml
 from stat import *
 import importlib
 
@@ -206,9 +207,11 @@ class Provider(object):
   def _get_instance_roles(self, instance_name):
     inst_d = self.get(str(instance_name))
     if inst_d is not None:
-      print "inst_d: {0}".format(inst_d)
-      self.ssh.run_command(inst_d['instance'], 
-      "sudo salt-call grains.item roles")
+      roles = self.ssh.run_command(inst_d['instance_obj'], "sudo salt-call -l quiet grains.item roles")
+      try:
+        return yaml.load(roles)
+      except Exception, e:
+        print "Exception: {0}".format(e)
 
   ## Build a profile config
   def _build_provider_config(self, config):
