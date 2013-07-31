@@ -15,6 +15,7 @@ class Aws(Provider):
     super(Aws, self).__init__(environment, config)
     self._load_conns()
     # Load the running instances
+    self.in_launch_mode = False
     self.running_instances = None
     # self._load_connection()
     
@@ -23,6 +24,7 @@ class Aws(Provider):
     if not isinstance(instances, dict):
       instances = [instances]
     launched_instances = {}
+    self.in_launch_mode = True
     for name, inst in instances.iteritems():
       launch_config = self._load_machine_desc(name)
       security_group = self._setup_security_group(inst, launch_config)
@@ -33,6 +35,7 @@ class Aws(Provider):
         instance = self.launch_single_instance(inst)
         self.ssh.wait_for_ssh(instance.ip_address(), instance.ssh_port())
         launched_instances[name] = instance
+    self.in_launch_mode = False
     return launched_instances
 
   def launch_and_bootstrap(self, instances):
@@ -110,6 +113,10 @@ Adding tags:
       running_instance.add_tag('environment', instance.environment.environment)
     else:
       print "Instance status: {0}".format(status)
+
+    ## Update this into environment.py
+    instance = Instance(instance.name, instance.instance_options, instance.environment)
+    instance.environment.instances[instance.name] = instance
     
     return instance
       
@@ -146,7 +153,7 @@ Adding tags:
   ## this is raw data, not instance objects
   def all(self):
     """List instances"""
-    if self.running_instances is None:
+    if self.running_instances is None or self.in_launch_mode:
       running_instances = []
       for name, c in self._conns.items():
         reservations = c.get_all_instances()
