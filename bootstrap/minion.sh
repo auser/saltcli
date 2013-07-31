@@ -14,7 +14,8 @@ __apt_get_noinput() {
 }
 
 apt-get update
-__apt_get_noinput python-software-properties curl debconf-utils
+# Odd errors: python-software-properties curl debconf-utils
+__apt_get_noinput software-properties-common curl
 apt-get update
 
 # Set the hostname

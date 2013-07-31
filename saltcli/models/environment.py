@@ -21,6 +21,7 @@ class Environment(object):
     ## Setup naming
     self.environment  = opts['environment']
     self.ssh = self.provider.ssh
+    self.orig_opts = opts
     
     ## PLANS
     self.plan = None

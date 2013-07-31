@@ -6,7 +6,7 @@ from saltcli.utils.ssh import Ssh
 from saltcli.utils import utils
 from saltcli.utils.utils import build_fabric_env
 from saltcli.utils.utils import get_colors
-import os, sys, time
+import os, sys, time, tempfile
 import yaml
 from stat import *
 import importlib
@@ -212,6 +212,19 @@ class Provider(object):
         return yaml.load(roles)
       except Exception, e:
         print "Exception: {0}".format(e)
+
+  def _set_instance_roles(self, instance, roles):
+    inst_d = self.get(instance)
+
+    yaml_conf = yaml.dump({'roles': roles})
+    fi, path = tempfile.mkstemp('saltcli_')
+    f = os.fdopen(fi, "w")
+    f.write(yaml_conf)
+    f.close()
+    inst_d['instance_obj'].upload_file(path, '/etc/salt/grains')
+    os.close(fi)
+    if inst_d is not None:
+      roles = self.ssh.run_command(inst_d['instance_obj'], "sudo restart salt-minion")
 
   ## Build a profile config
   def _build_provider_config(self, config):
