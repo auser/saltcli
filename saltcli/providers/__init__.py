@@ -203,17 +203,19 @@ class Provider(object):
       if inst.tags['instance_name'] == "master":
         return inst
     return None
-    
-  def _get_instance_roles(self, instance_name):
+
+  def get_instance_roles(self, instance_name):
     inst_d = self.get(str(instance_name))
     if inst_d is not None:
       roles = self.ssh.run_command(inst_d['instance_obj'], "sudo salt-call -l quiet grains.item roles")
       try:
-        return yaml.load(roles)
+        doc = yaml.load(roles)
+        inst_d['roles'] = doc['roles']
+        return doc
       except Exception, e:
         print "Exception: {0}".format(e)
 
-  def _set_instance_roles(self, instance, roles):
+  def set_instance_roles(self, instance, roles):
     inst_d = self.get(instance)
 
     yaml_conf = yaml.dump({'roles': roles})

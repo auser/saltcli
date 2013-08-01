@@ -11,11 +11,14 @@ class Environment(object):
   def __init__(self, opts):
     super(Environment, self).__init__()
     self.opts           = opts
-    self._load_config_file(opts['config_file'])
+    if 'config_file' in opts:
+      self._load_config_file(opts['config_file'])
+      self.load_conf()
+    else:
+      self.config = dict({})
     self.provider_name  = opts['provider']
     # TODO: Make this dynamic so different configuration
     # file formats are acceptable
-    self.load_conf()
     self.setup_logging()
     self.load_provider()
     ## Setup naming
@@ -63,7 +66,10 @@ class Environment(object):
   
   ## Load providers
   def load_provider(self):
-    provider_config = self.config.get('providers')[self.provider_name]
+    provider_config_obj = self.config.get('providers', None)
+    provider_config = {}
+    if provider_config_obj is not None:
+      provider_config = provider_config_obj[self.provider_name]
     mod = importlib.import_module("saltcli.providers." + self.provider_name)
     self.provider =  getattr(mod, self.provider_name.capitalize())(self, provider_config)
   

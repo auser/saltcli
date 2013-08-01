@@ -8,7 +8,6 @@ class Role(Command):
   def run(self):
     """Role"""
     roles = {}
-    print len(self.environment.orig_opts['roles'])
     if len(self.environment.orig_opts['roles']) == 0:
       for inst in self.environment.instances:
         roles[inst] = self.environment.provider._get_instance_roles(inst)
