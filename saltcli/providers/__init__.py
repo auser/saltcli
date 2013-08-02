@@ -1,6 +1,5 @@
 import StringIO
-from fabric.api import *
-from fabric.api import sudo, put, run
+from fabric.api import sudo, put, run, settings, parallel
 from fabric.tasks import execute
 from saltcli.utils.ssh import Ssh
 from saltcli.utils import utils
@@ -36,8 +35,9 @@ class Provider(object):
   @parallel
   def _prepare_for_highstate(self):
     try:
-      sudo("salt-call saltutil.sync_all")
-      sudo("salt-call mine.update")
+      with settings(warn_only=True):
+        sudo("salt-call saltutil.sync_all")
+        sudo("salt-call mine.update")
     except Exception, e: 
       print "There was an error preparing for highstate: {0}".format(e)
     
@@ -49,7 +49,8 @@ class Provider(object):
       
       @parallel
       def highstate():
-        sudo("salt-call state.highstate")
+        with settings(warn_only=True):
+          sudo("salt-call state.highstate")
 
       env = build_fabric_env(instances)
       execute(self._prepare_for_highstate)
@@ -143,6 +144,21 @@ class Provider(object):
       
     [_upload_and_run_bootstrap_script(inst) for name, inst in instances.iteritems() if inst != None]
     
+  ## SaltAuth
+  def salt_auth(self, instances):
+    def one_pass():
+      with settings(warn_only=True):
+        sudo("salt-call grains.item roles")
+
+    def handle_salt_auth(instance):
+      master_server_ip = instance.environment.master_server().private_ip_address()
+      self.remove_minion_key(instance)
+      self.accept_minion_key(instance)
+
+      env = build_fabric_env(instance)
+      execute(one_pass)
+    [handle_salt_auth(inst) for name, inst in instances.iteritems() if inst != None]
+
   ## Accept the minion key
   def accept_minion_key(self, instance):
     priv, pub = utils.gen_keys()
@@ -173,7 +189,7 @@ class Provider(object):
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
-      sudo("start salt-master || restart salt-master || true")
+      # sudo("restart salt-master || start salt-master || true")
       
     env = build_fabric_env(instance)
     self.ssh.execute(instance, _create, hosts=[instance.ip_address()])
@@ -183,12 +199,19 @@ class Provider(object):
   def remove_minion_key(self, instance):
     if instance.environment.master_server():
       def _remove_minion_key():
+        sudo("rm -f {0}".format("/etc/salt/pki/minion/minion.pem"))
+        sudo("rm -f {0}".format("/etc/salt/pki/minion/minion.pub"))
+        sudo("restart salt-minion || start salt-minion || true")
+
+      def _remove_master_minion_key():
         pki_dir = "/etc/salt/pki/master"
         key = os.path.join(pki_dir, 'minions', instance.instance_name)
         sudo("rm -f {0}".format(key))
     
-      env = build_fabric_env(instance.environment.master_server())
+      env = build_fabric_env(instance)
       execute(_remove_minion_key)
+      env = build_fabric_env(instance.environment.master_server())
+      execute(_remove_master_minion_key)
   
   def upload(self, inst, args):
     if len(args) == 0:
