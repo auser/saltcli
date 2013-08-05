@@ -10,7 +10,7 @@ class Role(Command):
     roles = {}
     if len(self.environment.orig_opts['roles']) == 0:
       for inst in self.environment.instances:
-        roles[inst] = self.environment.provider._get_instance_roles(inst)
+        roles[inst] = self.environment.provider.get_instance_roles(inst)
 
       for name, roles in roles.items():
         print "{name}:".format(name=name)
@@ -21,7 +21,7 @@ class Role(Command):
     else:
       roles_to_set = self.environment.orig_opts['roles']
       for inst in self.environment.instances:
-        res = self.environment.provider._set_instance_roles(inst, roles_to_set)
+        res = self.environment.provider.set_instance_roles(inst, roles_to_set)
         if res:
           print "Successfully set roles {0} to {1}".format(roles_to_set, inst)
         else:

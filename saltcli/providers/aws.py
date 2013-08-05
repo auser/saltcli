@@ -109,6 +109,7 @@ Adding tags:
                   color=colors['YELLOW'],
                   endcolor=colors['ENDC']))
       running_instance.add_tag("name", instance.name)
+      running_instance.add_tag("Name", instance.instance_name) # aws console
       running_instance.add_tag('instance_name', instance.instance_name)
       running_instance.add_tag('environment', instance.environment.environment)
     else:
