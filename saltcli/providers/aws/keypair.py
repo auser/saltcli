@@ -38,8 +38,6 @@ def setup_keypair(conn, node, config):
     # Save the key and set perms
     key.save(config['key_dir'])
     os.chmod(inst_key_filename, 0600)
-    import sys
-    sys.exit(-1)
     return inst_key_name
 
 def _key_fingerprint(key_filename):
