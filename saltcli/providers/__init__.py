@@ -52,9 +52,18 @@ class Provider(object):
         with settings(warn_only=True):
           sudo("salt-call state.highstate")
 
+      def highstate_master():
+        with settings(warn_only=True):
+          sudo("salt \* state.highstate")
+
       env = build_fabric_env(instances)
       execute(self._prepare_for_highstate)
-      execute(highstate)
+      if self.environment.opts['all'] is False:
+        execute(highstate)
+      else:
+        env = build_fabric_env(self.environment.master_server())
+        execute(highstate_master)
+
     else:
       print "There was an error finding the instance you're referring to by name: {0}".format(name)
       
@@ -189,7 +198,7 @@ class Provider(object):
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
-      # sudo("restart salt-master || start salt-master || true")
+      sudo("restart salt-master || start salt-master || true")
       
     env = build_fabric_env(instance)
     self.ssh.execute(instance, _create, hosts=[instance.ip_address()])

@@ -40,7 +40,7 @@ __apt_get_noinput() {
 }
 
 apt-get update
-__apt_get_noinput python-software-properties curl debconf-utils git-python
+__apt_get_noinput python-software-properties curl debconf-utils
 apt-get update
 
 # We're using the saltstack canonical bootstrap method here to stay with the

@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 from saltcli.utils.utils import get_colors
 from saltcli.providers import Provider, dict_merge
 from saltcli.models.instance import Instance
+from saltcli.providers.aws.keypair import setup_keypair, key_name, key_filename
 import collections
 
 SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", "from_port", "to_port", "cidr_ip", "src_group_name"])
@@ -52,9 +53,9 @@ class Aws(Provider):
     elif self.config['region'] != self.conn.region:
       conn = self._load_connection_for_region(self.config['region'])
     
-    security_group = self._setup_security_group(instance, launch_config)
-    keypair = self._setup_keypair(instance, conn, launch_config)
-    colors = get_colors()
+    security_group  = self._setup_security_group(instance, launch_config)
+    keypair         = setup_keypair(conn, instance, self.config)
+    colors          = get_colors()
     
     print """Launching an AWS instance:
     Image:              {color}{image_id}{colors[ENDC]}
@@ -160,7 +161,7 @@ Adding tags:
         reservations = c.get_all_instances()
         for res in reservations:
           for inst in res.instances:
-            if inst.key_name == self.keypair_name(c) and inst.update() == 'running':
+            if inst.key_name == key_name(c, inst, self.config) and inst.update() == 'running':
               inst_d = {
                 'instance': inst,
                 'instance_obj': Instance(inst.tags['name'], {}, self.environment),
@@ -183,81 +184,81 @@ Adding tags:
     
   # Set up the keypair
   # This will look at the key_filename
-  def _setup_keypair(self, instance, conn, launch_config):
-    key_path = instance.key_filename()
-    keypair = self._get_keypair(conn)
+#   def _setup_keypair(self, instance, conn, launch_config):
+#     key_path = instance.key_filename()
+#     keypair = self._get_keypair(conn)
     
-    if keypair:
-      if not os.path.exists(self.config['key_file']):
-        colors = get_colors()
-        instance.environment.debug("""
-        {color}Key cannot be found at {key_file}{colors[ENDC]}
-        Attempting to recreate...
-        """.format(key_file=self.config['key_file'], color=colors['RED'], colors=colors))
-        keypair.delete()
-        keypair = self._create_keypair(instance, conn)
+#     if keypair:
+#       if not os.path.exists(self.config['key_file']):
+#         colors = get_colors()
+#         instance.environment.debug("""
+#         {color}Key cannot be found at {key_file}{colors[ENDC]}
+#         Attempting to recreate...
+#         """.format(key_file=self.config['key_file'], color=colors['RED'], colors=colors))
+#         keypair.delete()
+#         keypair = self._create_keypair(instance, conn)
       
-      st = os.stat(key_path).st_mode
-      mode = oct(S_IMODE(os.stat(key_path).st_mode))
-      if not mode == '0600':
-        self.environment.error("""
-The key {0} does not have the proper permissions ({1}). 
-Please check your permissions and try again.
-        """.format(key_path, mode))
+#       st = os.stat(key_path).st_mode
+#       mode = oct(S_IMODE(os.stat(key_path).st_mode))
+#       if not mode == '0600':
+#         self.environment.error("""
+# The key {0} does not have the proper permissions ({1}). 
+# Please check your permissions and try again.
+#         """.format(key_path, mode))
       
-      if keypair.region != conn.region:
-        instance.environment.debug(
-          "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
-            old=keypair.region.name,
-            curr=conn.region.name,
-          )
-        )
-        # key = keypair.copy_to_region(conn.region)
-        key = self._create_keypair(instance, conn)
-        # key_path = instance.key_filename()
-        # filepath = os.path.dirname(key_path)
-        # key.save(filepath)
-        # os.chmod(key_path, 0600)
-    else:
-      self._create_keypair(instance, conn)
+#       if keypair.region != conn.region:
+#         instance.environment.debug(
+#           "Keypair was created in a different region ({old}). Copying it to our current region {curr}".format(
+#             old=keypair.region.name,
+#             curr=conn.region.name,
+#           )
+#         )
+#         # key = keypair.copy_to_region(conn.region)
+#         key = self._create_keypair(instance, conn)
+#         # key_path = instance.key_filename()
+#         # filepath = os.path.dirname(key_path)
+#         # key.save(filepath)
+#         # os.chmod(key_path, 0600)
+#     else:
+#       self._create_keypair(instance, conn)
     
-    return self.keypair_name(conn)
+#     return self.key_name(conn)
     
   ## Get keypairs
-  def _get_keypair(self, conn):
-    if self.keypair_name(conn) in [k.name for k in self._all_keypairs(conn)]:
-      for k in self._all_keypairs(conn):
-        if k.name == self.keypair_name(conn):
-          return k
+  # def _get_keypair(self, conn):
+  #   if self.key_name(conn) in [k.name for k in self._all_keypairs(conn)]:
+  #     for k in self._all_keypairs(conn):
+  #       if k.name == self.key_name(conn):
+  #         return k
           
-    return None
+  #   return None
     
   ## ALL KEYPAIRS
-  def _all_keypairs(self, conn):
-    # return conn.get_all_key_pairs()
-    keypairs = []
-    for name, c in self._conns.items():
-      res = c.get_all_key_pairs()
-      for k in res:
-        if k not in keypairs:
-          keypairs.append(k)
+  # def _all_keypairs(self, conn):
+  #   # return conn.get_all_key_pairs()
+  #   keypairs = []
+  #   for name, c in self._conns.items():
+  #     res = c.get_all_key_pairs()
+  #     for k in res:
+  #       if k not in keypairs:
+  #         keypairs.append(k)
     
-    return keypairs
+  #   return keypairs
         
   ## Create a keypair per instance
-  def _create_keypair(self, instance, conn):
-    try:
-      key_path = instance.key_filename()
-      ## Attempting to create_key_pair
-      key   = conn.create_key_pair(self.keypair_name(conn))
-      filepath = os.path.dirname(key_path)
-      instance.environment.debug("Saving key to {0}".format(key_path))
-      key.save(filepath)
-      os.chmod(key_path, 0600)
-      return key
-    except Exception, e:
-      instance.environment.debug("Keypair exception '%s'..."%(e))
-      return None
+  # def _create_keypair(self, instance, conn):
+  #   try:
+  #     key_path = instance.key_filename()
+  #     ## Attempting to create_key_pair
+  #     key   = conn.create_key_pair(self.key_name(conn))
+  #     filepath = os.path.dirname(key_path)
+  #     instance.environment.debug("Saving key to {0}".format(key_path))
+  #     key.save(filepath)
+  #     os.chmod(key_path, 0600)
+  #     return key
+  #   except Exception, e:
+  #     instance.environment.debug("Keypair exception '%s'..."%(e))
+  #     return None
     
   ## Create the security group and attach the appropriate permissions
   def _setup_security_group(self, instance, launch_config):
@@ -269,7 +270,7 @@ Please check your permissions and try again.
       conn = self.conn
     
     ## Now that we have our connection...
-    group_name = self.keypair_name(conn) + "-" + instance.instance_name
+    group_name = key_name(conn, instance, self.config) + "-" + instance.instance_name
     groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
     group = groups[0] if groups else None
     if not group:
@@ -345,16 +346,16 @@ Please check your permissions and try again.
   
   # Convenience method to get the keypair
   # TODO: Move this into the parent class
-  def keypair_name(self, conn):
-    if isinstance(conn, Instance):
-      conn = self._load_connection_for_instance(conn)
-    if conn is None:
-      conn = self.conn
-    return "{0}-{1}".format(conn.region.name, self.config['keyname'])
+  # def key_name(self, conn):
+  #   if isinstance(conn, Instance):
+  #     conn = self._load_connection_for_instance(conn)
+  #   if conn is None:
+  #     conn = self.conn
+  #   return "{0}-{1}".format(conn.region.name, self.config['keyname'])
     
-  def key_filename(self, conn):
-    key_dir = self.config['key_dir']
-    return os.path.join(key_dir, "{0}.pem".format(self.keypair_name(conn)))
+  def key_filename(self, instance):
+    conn = self._load_connection_for_instance(instance)
+    return key_filename(conn, instance, self.config)
     
   ## Load conn for instance
   def _load_connection_for_instance(self, instance):
