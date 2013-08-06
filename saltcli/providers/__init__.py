@@ -161,7 +161,7 @@ class Provider(object):
 
     def handle_salt_auth(instance):
       master_server_ip = instance.environment.master_server().private_ip_address()
-      self.remove_minion_key(instance)
+      self.remove_minion_key(instance, True)
       self.accept_minion_key(instance)
 
       env = build_fabric_env(instance)
@@ -198,14 +198,15 @@ class Provider(object):
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
-      sudo("restart salt-master || start salt-master || true")
+      # sudo("restart salt-master || start salt-master || true")
       
     env = build_fabric_env(instance)
     self.ssh.execute(instance, _create, hosts=[instance.ip_address()])
     env = build_fabric_env(instance.environment.master_server())
     self.ssh.execute(instance.environment.master_server(), _accept, hosts=[instance.environment.master_server().ip_address()])
     
-  def remove_minion_key(self, instance):
+  # Set resetting true if we are resetting the node's keys
+  def remove_minion_key(self, instance, resetting=False):
     if instance.environment.master_server():
       def _remove_minion_key():
         sudo("rm -f {0}".format("/etc/salt/pki/minion/minion.pem"))
@@ -217,8 +218,9 @@ class Provider(object):
         key = os.path.join(pki_dir, 'minions', instance.instance_name)
         sudo("rm -f {0}".format(key))
     
-      env = build_fabric_env(instance)
-      execute(_remove_minion_key)
+      if resetting:
+        env = build_fabric_env(instance)
+        execute(_remove_minion_key)
       env = build_fabric_env(instance.environment.master_server())
       execute(_remove_master_minion_key)
   

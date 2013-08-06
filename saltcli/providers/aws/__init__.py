@@ -163,6 +163,7 @@ Adding tags:
           for inst in res.instances:
             if inst.key_name == key_name(c, inst, self.config) and inst.update() == 'running':
               inst_d = {
+                'name': inst.tags['name'],
                 'instance': inst,
                 'instance_obj': Instance(inst.tags['name'], {}, self.environment),
                 'ip': inst.ip_address,
