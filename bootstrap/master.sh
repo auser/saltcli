@@ -1,33 +1,25 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 
-HOSTNAME=${1:-master}
-SALT_MASTER=${2:-127.0.0.1}
-ENV=${3:-development}
-INDEX=${4:-1}
-ROLES=${5:-saltmaster}
+{% set hostname = opts.get('hostname', 'saltmaster') -%}
+{% set env = opts.get('environment', 'development') -%}
+{% set index = opts.get('index', 1) -%}
+{% set location = opts.get('location', 'ec2') -%}
+{% set roles = opts.get('roles', ['salt.master']) -%}
+{% set priv_key = opts.get('priv_key', '') -%}
+{% set pub_key = opts.get('pub_key', '') -%}
 
-echo "------> Bootstrapping master for environment $ENV"
+echo "------> Bootstrapping master for environment {{ env }}"
 
 __apt_get_noinput() {
     apt-get install -y -o DPkg::Options::=--force-confold $@
 }
 
-apt-get update -y
-__apt_get_noinput python-software-properties curl debconf-utils
+mkdir -p /etc/salt/pki
 
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
+## Set keys
+echo '{{ priv_key }}' > /etc/salt/pki/minion.pem
+echo '{{ pub_key }}' > /etc/salt/pki/minion.pub
 
-service salt-master stop || true
-service salt-minion stop || true
-
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
-#
-# Eventually, we can come to settle down on our own way of bootstrapping
-(
-  exec curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
-)
 # Set the hostname
 echo """
 127.0.0.1       localhost   saltmaster
@@ -71,10 +63,8 @@ peer:
 
 master: 127.0.0.1
 grains:
-  roles: 
-    - saltmaster
-  environment: $ENV
-  location: $LOC
+  environment: {{ env }}
+  location: {{ location }}
 """ > /etc/salt/master
 
 
@@ -85,8 +75,8 @@ master: saltmaster
 id: saltmaster
 
 grains:
-  environment: $ENV
-  location: $LOC
+  environment: {{ env }}
+  location: {{ location }}
 
 log_file: /var/log/salt/minion
 log_level: debug
@@ -95,7 +85,9 @@ log_level_logfile: garbage
 
 echo """
 roles:
-  - saltmaster
+{% for role in roles -%}
+  - {{ role }}
+{% endfor -%}
 index: 1
 """ > /etc/salt/grains
 
@@ -131,9 +123,11 @@ respawn limit 5 20
 script
 exec salt-minion
 end script
-
 """ > /etc/init/salt-minion.conf
 
-service salt-minion restart || service salt-minion start || true
+apt-get update -y
+__apt_get_noinput python-software-properties curl debconf-utils
 
-salt-key -a saltmaster
+(
+  exec curl -L http://bootstrap.saltstack.org | sudo sh -s -- -M stable
+)

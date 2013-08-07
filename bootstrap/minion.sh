@@ -1,83 +1,41 @@
 #!/bin/bash -ex
 
-HOSTNAME=${1:-minion}
-SALT_MASTER=${2:-192.168.98.11}
-ENV=${3:-development}
-INDEX=${4:-1}
-ROLES=${5:-salt.minion}
+{% set hostname = opts.get('hostname', 'minion') -%}
+{% set saltmaster = opts.get('saltmaster', '192.168.1.11') -%}
+{% set env = opts.get('environment', 'development') -%}
+{% set index = opts.get('index', 1) -%}
+{% set roles = opts.get('roles', ['salt.minion']) -%}
 
-echo "------> Bootstrapping minion $HOSTNAME (master: $SALT_MASTER) for environment $ENV"
-echo "--------> Roles: $ROLES"
+echo "------> Bootstrapping minion {{ hostname }} (master: {{ saltmaster }}) for environment {{ env }}"
 
-__apt_get_noinput() {
-    apt-get install -y -o DPkg::Options::=--force-confold $@
-}
-
-apt-get update
-# Odd errors: python-software-properties curl debconf-utils
-__apt_get_noinput software-properties-common curl
-apt-get update
+## Set keys
+echo '{{ priv_key }}' > /etc/salt/pki/minion.pem
+echo '{{ pub_key }}' > /etc/salt/pki/minion.pub
 
 # Set the hostname
 echo """
 127.0.0.1       localhost
-127.0.1.1       $HOSTNAME
-$SALT_MASTER    saltmaster
+127.0.1.1       {{ hostname }}
+{{ saltmaster }}    saltmaster
 """ > /etc/hosts
-echo "$HOSTNAME" > /etc/hostname
-hostname `cat /etc/hostname`
-
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
-
-killall salt-minion || true
-
-echo "------> Bootstrapping minion $HOSTNAME (master: $SALT_MASTER) for environment $ENV"
-echo "--------> Roles: $ROLES"
-
-__apt_get_noinput() {
-    apt-get install -y -o DPkg::Options::=--force-confold $@
-}
-
-apt-get update
-__apt_get_noinput python-software-properties curl debconf-utils
-apt-get update
-
-# We're using the saltstack canonical bootstrap method here to stay with the
-# latest open-source efforts
-#
-# Eventually, we can come to settle down on our own way of bootstrapping
-(
-  exec curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
-)
-
-# Set the hostname
-echo """
-127.0.0.1       localhost
-127.0.1.1       $HOSTNAME
-$SALT_MASTER    saltmaster
-""" > /etc/hosts
-echo "$HOSTNAME" > /etc/hostname
+echo "{{ hostname }}" > /etc/hostname
 hostname `cat /etc/hostname`
 
 # Set salt master location and start minion
 echo """
 master: saltmaster
-id: $HOSTNAME
+id: {{ hostname }}
 grains:
-  environment: $ENV
-  index: $INDEX
+  environment: {{ env }}
+  index: {{ index }}
 """ > /etc/salt/minion
 
 echo """
-environment: $ENV
-index: $INDEX
 roles:
+{% for role in roles -%}
+  - {{ role }}
+{% endfor -%}
 """ > /etc/salt/grains
 
-for i in $(echo "$ROLES" | tr "," "\n")
-do
-  echo "  - ${i}" >> /etc/salt/grains
-done
-
-restart salt-minion || start salt-minion || true
+apt-get update
+apt-get install -y -o DPkg::Options::=--force-confold salt-minion

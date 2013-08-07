@@ -123,6 +123,6 @@ setup(
         "Fabric==1.6.0",
         "Jinja2==2.7",
         "pyyaml",
-        "salt"
+        "salt",
     ],
 )

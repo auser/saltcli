@@ -5,6 +5,7 @@ from saltcli.utils.ssh import Ssh
 from saltcli.utils import utils
 from saltcli.utils.utils import build_fabric_env
 from saltcli.utils.utils import get_colors
+import saltcli.utils.template
 import os, sys, time, tempfile
 import yaml
 from stat import *
@@ -98,17 +99,7 @@ class Provider(object):
     execute(_cmdrun)
     
   ## PRIVATE
-  def bootstrap(self, instances):
-    this_dir = os.path.dirname(os.path.realpath(__file__))
-    bootstrap_dir = os.path.join(this_dir, "..", "..", "bootstrap")
-    
-    def get_script(instance):
-      if instance.ismaster():
-        script_name = "master.sh"
-      else:
-        script_name = "minion.sh"
-      return os.path.join(bootstrap_dir, script_name)
-        
+  def bootstrap(self, instances):        
     def _upload_and_run_bootstrap_script(instance):    
       ## Upload script
       if instance.ismaster():
@@ -117,35 +108,40 @@ class Provider(object):
         master_server_ip = "127.0.0.1"
       else:
         master_server_ip = instance.environment.master_server().private_ip_address()
-    
-      ## Run bootstrap script
-      local_file = get_script(instance)
-      print "Uploading {0} to {1}".format(local_file, instance.name)
-      instance.upload(local_file, "/tmp/")
+      
+      ## Generate new keys for this minion
+      priv, pub = utils.gen_keys()
       index = len(self.all()) + 1
+
+      ## Run bootstrap script
+      local_file = saltcli.utils.template.gen_rendered_script(instance, {
+        'hostname': instance.instance_name,
+        'saltmaster': master_server_ip,
+        'environment': instance.environment.environment,
+        'index': index,
+        'roles': instance.roles,
+        'priv_key': priv,
+        'pub_key': pub,
+        })
+
+      print "Uploading {0} to {1}".format(local_file.name, instance.name)
+      instance.upload(local_file.name, "/tmp")
       
       def bootstrap_script():
         # cmd = "sudo /bin/sh #{remotepath} #{provider.to_s} #{name} #{master_server.preferred_ip} #{environment} #{index} #{rs}"
-        script_name = os.path.basename(get_script(instance))
-        sudo("chmod u+x /tmp/{script}".format(script=script_name))
+        script_name = os.path.basename(local_file.name)
+        sudo("chmod u+x /tmp/{script_name}".format(script_name=script_name))
         
-        script = "/tmp/{script} {inst_name} {master_server} {env} {index} {rs}".format(
-          script = script_name,
-          provider_name = self.__class__.__name__.lower(),
-          inst_name = instance.instance_name,
-          master_server = master_server_ip,
-          env = instance.environment.environment,
-          index = index,
-          rs = ",".join(instance.roles)
-        )
-        instance.environment.debug("Running bootstrap_script: {0}".format(script))
-        sudo(script)
+        instance.environment.debug("Running bootstrap_script: {0}".format(script_name))
+        sudo("/tmp/{0}".format(script_name))
         sudo("restart salt-minion || start salt-minion || true")
     
+      ## Cleanup
+      local_file.close()
       ## Run bootstrap script
       execute(bootstrap_script)
       # if not instance.ismaster():
-      self.accept_minion_key(instance)
+      self.accept_minion_key(instance, pub, False)
         
     if 'master' in instances:
       _upload_and_run_bootstrap_script(instances['master'])
@@ -160,25 +156,29 @@ class Provider(object):
         sudo("salt-call grains.item roles")
 
     def handle_salt_auth(instance):
+      priv, pub = utils.gen_keys()
       master_server_ip = instance.environment.master_server().private_ip_address()
-      self.remove_minion_key(instance, True)
-      self.accept_minion_key(instance)
+      self.remove_minion_key(instance, pub, True)
+      self.accept_minion_key(instance, pub, False)
 
       env = build_fabric_env(instance)
       execute(one_pass)
     [handle_salt_auth(inst) for name, inst in instances.iteritems() if inst != None]
 
   ## Accept the minion key
-  def accept_minion_key(self, instance):
-    priv, pub = utils.gen_keys()
-    
-    def _create():
-      pki_dir = "/etc/salt/pki/minion/"
-      priv_key = os.path.join(pki_dir, "minion.pem")
-      put(StringIO.StringIO(priv), priv_key, use_sudo=True, mode=0600)
-      pub_key = os.path.join(pki_dir, "minion.pub")
-      put(StringIO.StringIO(pub), pub_key, use_sudo=True, mode=0600)
-      sudo("restart salt-minion || start salt-minion || true")
+  def accept_minion_key(self, instance, pub, recreate_key=False):
+    ## Create a new  minion key on the minion    
+    if recreate_key:
+      def _create():
+        pki_dir = "/etc/salt/pki/minion/"
+        priv_key = os.path.join(pki_dir, "minion.pem")
+        put(StringIO.StringIO(priv), priv_key, use_sudo=True, mode=0600)
+        pub_key = os.path.join(pki_dir, "minion.pub")
+        put(StringIO.StringIO(pub), pub_key, use_sudo=True, mode=0600)
+        sudo("restart salt-minion || start salt-minion || true")
+
+      env = build_fabric_env(instance)
+      self.ssh.execute(instance, _create, hosts=[instance.ip_address()])
       
     def _accept(**kwargs):  
       pki_dir = "/etc/salt/pki/master"
@@ -190,18 +190,18 @@ class Provider(object):
       for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
           key_path = os.path.join(pki_dir, key_dir)
           sudo("mkdir -p {0}".format(key_path))
-          
-      for key_dir in ('minions_pre', 'minions_rejected'):
-        oldkey = os.path.join(pki_dir, key_dir, instance_name)
-        sudo("rm -f {0}".format(oldkey))
-        
+
+      oldkey = os.path.join(pki_dir, 'minions_pre', instance_name)
+      if os.path.isfile(oldkey):
+        with open(oldkey) as fp:
+          if fp.read() == pub:
+            os.remove(oldkey)
+
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
       sudo("chown root:root {0}".format(key))
       # sudo("restart salt-master || start salt-master || true")
-      
-    env = build_fabric_env(instance)
-    self.ssh.execute(instance, _create, hosts=[instance.ip_address()])
+
     env = build_fabric_env(instance.environment.master_server())
     self.ssh.execute(instance.environment.master_server(), _accept, hosts=[instance.environment.master_server().ip_address()])
     
