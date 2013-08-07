@@ -78,6 +78,4 @@ echo deb http://ppa.launchpad.net/saltstack/salt/ubuntu `lsb_release -sc` main |
 wget -q -O- "http://keyserver.ubuntu.com:11371/pks/lookup?op=get&search=0x4759FA960E27C0A6" | sudo apt-key add -
 
 apt-get update -y
-apt-get install -y python-software-properties curl debconf-utils 
-
 exec curl -L http://bootstrap.saltstack.org | sudo sh -s -- stable
