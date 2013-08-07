@@ -193,9 +193,7 @@ class Provider(object):
 
       oldkey = os.path.join(pki_dir, 'minions_pre', instance_name)
       if os.path.isfile(oldkey):
-        with open(oldkey) as fp:
-          if fp.read() == pub:
-            os.remove(oldkey)
+        os.remove(oldkey)
 
       key = os.path.join(pki_dir, 'minions', instance_name)
       put(StringIO.StringIO(pub), key, use_sudo=True)
