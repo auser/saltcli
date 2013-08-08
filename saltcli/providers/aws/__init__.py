@@ -7,6 +7,7 @@ from saltcli.utils.utils import get_colors
 from saltcli.providers import Provider, dict_merge
 from saltcli.models.instance import Instance
 from saltcli.providers.aws.keypair import setup_keypair, key_name, key_filename
+from saltcli.providers.aws.block_mappings import block_mappings
 import collections
 
 SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", "from_port", "to_port", "cidr_ip", "src_group_name"])
@@ -79,6 +80,7 @@ class Aws(Provider):
                               key_name=keypair,
                               security_groups=[security_group.name],
                               instance_type=launch_config['flavor'],
+                              block_device_map = block_mappings(launch_config['flavor']),
                               placement=launch_config['availability_zone'],
                               )
     except boto.exception.EC2ResponseError as e:
