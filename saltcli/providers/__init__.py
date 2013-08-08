@@ -35,10 +35,14 @@ class Provider(object):
     
   @parallel
   def _prepare_for_highstate(self):
+    saltcmd = "salt-call"
+    if self.environment.opts['all'] is True:
+      saltcmd = "salt \*"
+
     try:
       with settings(warn_only=True):
-        sudo("salt-call saltutil.sync_all")
-        sudo("salt-call mine.update")
+        sudo("%s saltutil.sync_all" % (saltcmd))
+        sudo("%s mine.update" % (saltcmd))
     except Exception, e: 
       print "There was an error preparing for highstate: {0}".format(e)
     
@@ -47,26 +51,27 @@ class Provider(object):
       instances = instances.values()
       salt_dir = os.path.join(os.getcwd(), "deploy", "salt/")
       instances[0].environment.master_server().upload(salt_dir, "/srv/salt")
-      
+        
+      saltcmd = "salt-call"
+      if self.environment.opts['all'] is True:
+        saltcmd = "salt \*"
+
       @parallel
       def highstate():
         with settings(warn_only=True):
-          sudo("salt-call state.highstate")
+          sudo("%s state.highstate" % (saltcmd))
 
-      def highstate_master():
-        with settings(warn_only=True):
-          sudo("salt \* state.highstate")
-
-      env = build_fabric_env(instances)
       execute(self._prepare_for_highstate)
+
       if self.environment.opts['all'] is False:
-        execute(highstate)
+        env = build_fabric_env(instances)
       else:
         env = build_fabric_env(self.environment.master_server())
-        execute(highstate_master)
+
+      execute(highstate)
 
     else:
-      print "There was an error finding the instance you're referring to by name: {0}".format(name)
+      print "There was an error finding the instance you're referring"
       
   def overstate(self, instances):
     colors = get_colors()
