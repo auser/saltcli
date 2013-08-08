@@ -1,4 +1,4 @@
-import boto, os
+import boto, os, sys
 
 # Set up the keypair
 def setup_keypair(conn, node, config):
@@ -11,6 +11,10 @@ def setup_keypair(conn, node, config):
   fingerprint = ""
   if os.path.exists(inst_key_filename):
     fingerprint = _key_fingerprint(inst_key_filename)
+
+    if ((os.stat(inst_key_filename).st_mode & 0777) != 0600):
+      print "Key %s has incorrect permissions. Please make sure the permissions are 0600" % (inst_key_filename)
+      sys.exit(-1)
 
   # Now look for the key on EC2
   key = _lookup_ec2_key(conn, inst_key_name)
