@@ -30,7 +30,6 @@ working_obj = {
   'name': ['master'],
   'config_file': os.path.join(working_dir, 'salt-config.yml'),
   'environment': 'development',
-  'plan': None,
   'roles': [],
   'all': False,
   }
@@ -50,14 +49,13 @@ def main(argv):
   working_obj['command'] = command
   
   try:
-    opts, args = getopt.getopt(argv[2:], 'hdtn:c:e:p:r:ya', [
+    opts, args = getopt.getopt(argv[2:], 'hdtn:c:e:r:ya', [
                                             'help', 
                                             'debug',
                                             'test',
                                             'name=',
                                             'config_file=',
                                             'environment=',
-                                            'plan=',
                                             'yes',
                                             'all',
                                             ])
@@ -85,8 +83,6 @@ def main(argv):
       if a[0] != '/':
         a = os.path.join(working_dir, a)
       working_obj['config_file'] = a
-    elif o in ('-p', '--plan'):
-      working_obj['plan'] = a
     elif o in ('-a', '--all'):
       working_obj['all'] = True
     ## Don't die on other options

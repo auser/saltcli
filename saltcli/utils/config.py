@@ -1,5 +1,4 @@
 import yaml
-from saltcli.lib import plan
 
 class Config(object):
   def __init__(self, conf_file):
@@ -7,8 +6,8 @@ class Config(object):
     self.conf_file = conf_file
     self.load_conf()
   
-  def plans(self):
-    return self.config.get('plans', [])
+  def machines(self):
+    return self.config.get('machines', [])
   
   def yaml(self):
     return self.config  
