@@ -88,6 +88,7 @@ roles:
 {% for role in roles -%}
   - {{ role }}
 {% endfor -%}
+  - saltmaster
 index: 1
 """ > /etc/salt/grains
 
