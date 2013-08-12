@@ -5,7 +5,6 @@ def _render_script(path, opts={}):
   '''
     Return a rendered script
   '''
-  print path
   try:
     with open(path, 'r') as fp:
       template = Template(fp.read())
