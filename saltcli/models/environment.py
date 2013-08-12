@@ -32,7 +32,7 @@ class Environment(object):
     # if plan_name:
     #   if plan_name in self.config.get('plans', []):
     #     self.plan = self.config['plans'][plan_name]
-    self.machines = opts.get('machines', [])
+    self.machines = self.config.get('machines', [])
         
     self.instances    = {}
     if opts.get('all', False):
@@ -42,7 +42,7 @@ class Environment(object):
 
     for inst_name in all_instance_names:
       if self.machines and inst_name in self.machines:
-        instance_options = self.machines.get(inst_name)
+        instance_options = self.machines.get(inst_name, {})
       else:
         instance_options = {
           'roles': opts['roles']
