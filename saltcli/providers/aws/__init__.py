@@ -178,7 +178,7 @@ Adding tags:
     return self.running_instances
     
   ## All the names of every instance
-  def all_names(self):
+  def all_running_names(self):
     running_instance_names = []
     for i in self.all():
       if 'name' in i['instance'].tags:

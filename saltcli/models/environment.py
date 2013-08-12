@@ -36,7 +36,7 @@ class Environment(object):
         
     self.instances    = {}
     if opts.get('all', False):
-      all_instance_names = self.provider.all_names()
+      all_instance_names = self.machines.keys()
     else:
       all_instance_names = opts['name']
 
@@ -44,11 +44,11 @@ class Environment(object):
       if self.machines and inst_name in self.machines:
         instance_options = self.machines.get(inst_name, {})
       else:
-        instance_options = {
-          'roles': opts['roles']
-        }
-      if instance_options is None:
-        self.error("No options found for the instance named: {0}\nPlease check your configuration and try again".format(inst_name))
+        raise Exception('not found', '{0} not found in config file'.format(inst_name))
+
+      if 'roles' in opts and opts['roles'] != []:
+        instance_options['roles'] = opts['roles']
+
       inst = Instance(inst_name, instance_options, self)
       self.instances[inst_name] = inst
   
@@ -58,7 +58,7 @@ class Environment(object):
     
   ## Get the master server
   def master_server(self):
-    for name in self.provider.all_names():
+    for name in self.provider.all_running_names():
       if name == "master":
         return Instance(name, {}, self)
     return None
