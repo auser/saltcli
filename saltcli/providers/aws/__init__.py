@@ -26,8 +26,11 @@ class Aws(Provider):
     if not isinstance(instances, dict):
       instances = [instances]
     launched_instances = {}
+    to_launch_instances = instances
     self.in_launch_mode = True
-    for name, inst in instances.iteritems():
+
+    ## Launch an instance (local to this method)
+    def _launch_instance(name, inst):
       launch_config = self._load_machine_desc(name)
       security_group = self._setup_security_group(inst, launch_config)
       if inst.get():
@@ -36,7 +39,18 @@ class Aws(Provider):
       else:
         instance = self.launch_single_instance(inst)
         self.ssh.wait_for_ssh(instance.ip_address(), instance.ssh_port())
-        launched_instances[name] = instance
+      return instance
+
+    # We need to launch the master first
+    if 'master' in to_launch_instances:
+      instance = _launch_instance('master', to_launch_instances['master'])
+      launched_instances['master'] = instance
+      del to_launch_instances['master']
+
+    for name, inst in to_launch_instances.iteritems():
+      instance = _launch_instance(name, inst)
+      launched_instances[name] = instance
+
     self.in_launch_mode = False
     return launched_instances
 
