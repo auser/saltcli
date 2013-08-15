@@ -287,7 +287,7 @@ Adding tags:
       conn = self.conn
     
     ## Now that we have our connection...
-    group_name = key_name(conn, instance, self.config) + "-" + instance.instance_name
+    group_name = "default" #key_name(conn, instance, self.config) + "-" + instance.instance_name
     groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
     group = groups[0] if groups else None
     if not group:
@@ -321,7 +321,7 @@ Adding tags:
                           None)
                           
       if current_rule not in expected_rules:
-        self._revoke(group, conn, current_rule)
+        print "Ignoring unexpected rule: %s" % (current_rule)
       else:
         current_rules.append(current_rule)
           
