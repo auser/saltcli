@@ -320,10 +320,7 @@ Adding tags:
                           str(rule.grants[0].cidr_ip),
                           None)
                           
-      if current_rule not in expected_rules:
-        print "Ignoring unexpected rule: %s" % (current_rule)
-      else:
-        current_rules.append(current_rule)
+      current_rules.append(current_rule)
           
     for rule in expected_rules:
       if rule not in current_rules:
