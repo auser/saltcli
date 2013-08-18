@@ -305,29 +305,34 @@ Adding tags:
     # for g in self.conn.get_all_security_groups():
       # expected_rules.append(SecurityGroupRule('tcp', 22, 65535, '0.0.0.0/0', g.name))
     
-    current_rules = []
-    for rule in group.rules:
-      if not rule.grants[0].cidr_ip:
-        current_rule = SecurityGroupRule(str(rule.ip_protocol),
-                          str(rule.from_port),
-                          str(rule.to_port),
-                          "0.0.0.0/0",
-                          str(rule.grants[0].name))
-      else:
-        current_rule = SecurityGroupRule(str(rule.ip_protocol),
-                          str(rule.from_port),
-                          str(rule.to_port),
-                          str(rule.grants[0].cidr_ip),
-                          None)
-                          
-      if current_rule not in expected_rules:
-        self._revoke(group, conn, current_rule)
-      else:
-        current_rules.append(current_rule)
-          
-    for rule in expected_rules:
-      if rule not in current_rules:
-        self._authorize(group, conn, rule)
+    colors = get_colors()
+    if self.environment.opts.get('answer_yes', False):
+      self.environment.info("{0}Updating security group to match the configuration{1[ENDC]}".format(colors['RED'], colors))
+      current_rules = []
+      for rule in group.rules:
+        if not rule.grants[0].cidr_ip:
+          current_rule = SecurityGroupRule(str(rule.ip_protocol),
+                            str(rule.from_port),
+                            str(rule.to_port),
+                            "0.0.0.0/0",
+                            str(rule.grants[0].name))
+        else:
+          current_rule = SecurityGroupRule(str(rule.ip_protocol),
+                            str(rule.from_port),
+                            str(rule.to_port),
+                            str(rule.grants[0].cidr_ip),
+                            None)
+                            
+        if current_rule not in expected_rules:
+          self._revoke(group, conn, current_rule)
+        else:
+          current_rules.append(current_rule)
+            
+      for rule in expected_rules:
+        if rule not in current_rules:
+          self._authorize(group, conn, rule)
+    else:
+      self.environment.info("{0}Not updating the security group authorizations. If you want to update the security group rules, pass `-y` option{1[ENDC]}".format(colors['BLUE'], colors))
     
     return group
   
