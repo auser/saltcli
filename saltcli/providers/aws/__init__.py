@@ -67,7 +67,7 @@ class Aws(Provider):
       conn = self._load_connection_for_region(self.config['region'])
     
     keypair         = setup_keypair(conn, instance, self.config)
-    security_group  = setup_security_group(conn, instance, self.config, launch_config)
+    security_group  = setup_security_group(conn, instance, self, launch_config)
     colors          = get_colors()
     
     print """Launching an AWS instance:
@@ -87,14 +87,25 @@ class Aws(Provider):
       color=colors['YELLOW'],
       colors=colors
     )
+
+    launch_opts = {
+      'key_name': keypair,
+      'security_groups': [security_group.name],
+      'instance_type': launch_config['flavor'],
+      'block_device_map': block_mappings(launch_config['flavor']),
+      'placement': launch_config['availability_zone'],
+    }
+
+    if 'user_data' in launch_config:
+      user_data = launch_config['user_data']
+      if os.path.isfile(user_data):
+        launch_opts['user_data'] = open(user_data).read()
+      else:
+        launch_opts['user_data'] = user_data
+
     try:
       reservation = conn.run_instances(launch_config['image_id'], 
-                              key_name=keypair,
-                              security_groups=[security_group.name],
-                              instance_type=launch_config['flavor'],
-                              block_device_map = block_mappings(launch_config['flavor']),
-                              placement=launch_config['availability_zone'],
-                              )
+          **launch_opts)
     except boto.exception.EC2ResponseError as e:
       print "Exception: {0}".format(e)
       if e.status == 400:
@@ -123,10 +134,13 @@ Adding tags:
                   environment=instance.environment.environment,
                   color=colors['YELLOW'],
                   endcolor=colors['ENDC']))
-      running_instance.add_tag("name", instance.name)
-      running_instance.add_tag("Name", instance.instance_name) # aws console
-      running_instance.add_tag('instance_name', instance.instance_name)
-      running_instance.add_tag('environment', instance.environment.environment)
+
+      conn.create_tags([running_instance.id], {
+        'name': instance.name,
+        'Name': instance.instance_name,
+        'instance_name': instance.instance_name,
+        'environment': instance.environment.environment
+        })
     else:
       print "Instance status: {0}".format(status)
 
@@ -175,7 +189,7 @@ Adding tags:
         reservations = c.get_all_instances()
         for res in reservations:
           for inst in res.instances:
-            if inst.key_name == key_name(c, inst, self.config) and inst.update() == 'running':
+            if inst.key_name == key_name(c, self.config) and inst.update() == 'running':
               if not inst.tags:
                 unknownId = 'Unknown' + str(len(running_instances))
                 running_instances.append({

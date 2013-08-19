@@ -4,7 +4,7 @@ import boto, os, sys
 def setup_keypair(conn, node, config):
   # Get the connection corresponding to this node
   # conn = regions[node.region]
-  inst_key_name       = key_name(conn, node, config)
+  inst_key_name       = key_name(conn, config)
   inst_key_filename   = key_filename(conn, node, config)
 
   # Get the fingerprint of the local key file (assuming it exists)
@@ -54,11 +54,11 @@ def _key_fingerprint(key_filename):
     print "Failed to pull fingerprint for %s: %s\n" % (key_filename, e.output)
     return ""
 
-def key_name(conn, node, config):
+def key_name(conn, config):
   return "%s-%s" % (conn.region, config['keyname'])
 
 def key_filename(conn, node, config):
-  return os.path.join(config['key_dir'], key_name(conn, node, config) + ".pem")
+  return os.path.join(config['key_dir'], key_name(conn, config) + ".pem")
 
 def _lookup_ec2_key(conn, key_name):
   try:

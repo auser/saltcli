@@ -9,21 +9,41 @@ from saltcli.models.instance import Instance
 from saltcli.providers.aws.keypair import setup_keypair, key_name, key_filename
 import collections
 
-import collections
-
 SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", "from_port", "to_port", "cidr_ip", "src_group_name"])
 
-def setup_security_group(conn, instance, config, launch_config):
+def setup_security_group(conn, instance, provider, launch_config):
   ## Now that we have our connection...
   environment = instance.environment
-  group_name = key_name(conn, instance, config) + "-" + instance.instance_name
+  config = provider.config
+  group_name = _group_name(conn, instance, config)
   groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
   group = groups[0] if groups else None
   if not group:
     instance.environment.debug("Creating group '%s'..."%(group_name,))
     group = conn.create_security_group(group_name, "A group for %s"%(group_name,))
-  
+
   expected_rules = []
+
+  if 'allow_groups' in launch_config:
+    allow_groups_names = launch_config['allow_groups']
+    # If we want ALL groups
+    if allow_groups_names == '*':
+      allow_groups_names = config['machines'].keys()
+
+    ## This is a dirty way of looking up all groups
+    allow_groups = []
+    for name in allow_groups_names:
+      if name != 'default':
+        launch_config_for_machine = provider._load_machine_desc(name)
+        if 'region' in launch_config_for_machine:
+          this_conn = provider._load_connection_for_region(launch_config_for_machine['region'])
+        elif provider.config['region'] != conn.region:
+          this_conn = provider._load_connection_for_region(provider.config['region'])
+          
+        gn = key_name(this_conn, config)+"-"+provider.environment.environment+'-'+name
+        if gn != group_name:
+          allow_groups.append(gn)
+  
   if 'ports' in launch_config:
     for proto, port_conf in launch_config['ports'].iteritems():
       for cidr, ports in port_conf.iteritems():
@@ -60,6 +80,18 @@ def setup_security_group(conn, instance, config, launch_config):
     for rule in expected_rules:
       if rule not in current_rules:
         _authorize(group, conn, rule)
+
+    ## Groups
+    for name in allow_groups:
+      src_group = get_or_create_security_group(conn, name)
+      print "Authorizing group: %s"%(name,)
+      try:
+        group.authorize(src_group=src_group)
+      except:
+        ## EC2 hates it when you try to authorize the
+        ## same rule twice.
+        False
+
   else:
     environment.info('''{0}
       Not updating the security group authorizations for the group:
@@ -72,7 +104,7 @@ def setup_security_group(conn, instance, config, launch_config):
 def _modify_sg(conn, group, rule, authorize=False, revoke=False):
     src_group = None
     if rule.src_group_name:
-        src_group = conn.get_all_security_groups([rule.src_group_name,])[0]
+      src_group = get_or_create_security_group(conn, rule.src_group_name)
 
     if authorize and not revoke:
         print "Authorizing missing rule %s..."%(rule,)
@@ -98,3 +130,15 @@ def _authorize(group, conn, rule):
 def _revoke(group, conn, rule):
     """Revoke `rule` on `group`."""
     return _modify_sg(conn, group, rule, revoke=True)
+
+def _group_name(conn, instance, config):
+  return key_name(conn, config) + "-" + instance.instance_name
+
+def get_or_create_security_group(conn, group_name, description=""):
+    """
+    """
+    groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
+    group = groups[0] if groups else None
+    if not group:
+      group = conn.create_security_group(group_name, "A group for %s"%(group_name,))
+    return group
