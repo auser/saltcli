@@ -24,35 +24,50 @@ def setup_security_group(conn, instance, provider, launch_config):
 
   expected_rules = []
 
-  if 'allow_groups' in launch_config:
-    allow_groups_names = launch_config['allow_groups']
+  # if 'allow_groups' in launch_config:
+    # allow_groups_names = launch_config['allow_groups']
     # If we want ALL groups
-    if allow_groups_names == '*':
-      allow_groups_names = config['machines'].keys()
+    # if allow_groups_names == '*':
+      # allow_groups_names = config['machines'].keys()
 
     ## This is a dirty way of looking up all groups
-    allow_groups = []
-    for name in allow_groups_names:
-      if name != 'default':
-        launch_config_for_machine = provider._load_machine_desc(name)
-        if 'region' in launch_config_for_machine:
-          this_conn = provider._load_connection_for_region(launch_config_for_machine['region'])
-        elif provider.config['region'] != conn.region:
-          this_conn = provider._load_connection_for_region(provider.config['region'])
+    # allow_groups = []
+    # for name in allow_groups_names:
+    #   if name != 'default':
+    #     launch_config_for_machine = provider._load_machine_desc(name)
+    #     if 'region' in launch_config_for_machine:
+    #       this_conn = provider._load_connection_for_region(launch_config_for_machine['region'])
+    #     elif provider.config['region'] != conn.region:
+    #       this_conn = provider._load_connection_for_region(provider.config['region'])
           
-        gn = key_name(this_conn, config)+"-"+provider.environment.environment+'-'+name
-        if gn != group_name:
-          allow_groups.append(gn)
+    #     gn = key_name(this_conn, config)+"-"+provider.environment.environment+'-'+name
+    #     if gn != group_name:
+    #       allow_groups.append(gn)
   
+  allow_groups_names = config['machines'].keys()
+
   if 'ports' in launch_config:
     for proto, port_conf in launch_config['ports'].iteritems():
+      new_rules = []
       for cidr, ports in port_conf.iteritems():
-        for port in ports:
-          rule = SecurityGroupRule(str(proto), str(port), str(port), str(cidr), None)
-          expected_rules.append(rule)
-  
-  # for g in self.conn.get_all_security_groups():
-    # expected_rules.append(SecurityGroupRule('tcp', 22, 65535, '0.0.0.0/0', g.name))
+        cidr = str(cidr)
+        if '0.0.0.0/0' in cidr:
+          for port in ports:
+            rule = SecurityGroupRule(str(proto), str(port), str(port), cidr, None)
+            expected_rules.append(rule)
+        else:
+          name = str(cidr)
+          if name == '*':
+            for instName in allow_groups_names:
+              sg = get_machine_name(instName, provider, config)
+              for port in ports:
+                rule = SecurityGroupRule(str(proto), str(port), str(port), None, sg)
+                expected_rules.append(rule)
+          else:
+            sg = get_machine_name(name, provider, config)
+            for port in ports:
+              rule = SecurityGroupRule(str(proto), str(port), str(port), None, sg)
+              expected_rules.append(rule)
   
   colors = get_colors()
   if environment.opts.get('answer_yes', False):
@@ -82,15 +97,15 @@ def setup_security_group(conn, instance, provider, launch_config):
         _authorize(group, conn, rule)
 
     ## Groups
-    for name in allow_groups:
-      src_group = get_or_create_security_group(conn, name)
-      print "Authorizing group: %s"%(name,)
-      try:
-        group.authorize(src_group=src_group)
-      except:
-        ## EC2 hates it when you try to authorize the
-        ## same rule twice.
-        False
+    # for name in allow_groups:
+      # src_group = get_or_create_security_group(conn, name)
+      # print "Authorizing group: %s"%(name,)
+      # try:
+      #   group.authorize(src_group=src_group)
+      # except:
+      #   ## EC2 hates it when you try to authorize the
+      #   ## same rule twice.
+      #   False
 
   else:
     environment.info('''{0}
@@ -142,3 +157,12 @@ def get_or_create_security_group(conn, group_name, description=""):
     if not group:
       group = conn.create_security_group(group_name, "A group for %s"%(group_name,))
     return group
+
+def get_machine_name(name, provider, config):
+  launch_config_for_machine = provider._load_machine_desc(name)
+  if 'region' in launch_config_for_machine:
+    this_conn = provider._load_connection_for_region(launch_config_for_machine['region'])
+  elif provider.config['region'] != conn.region:
+    this_conn = provider._load_connection_for_region(provider.config['region'])
+    
+  return key_name(this_conn, config)+"-"+provider.environment.environment+'-'+name
