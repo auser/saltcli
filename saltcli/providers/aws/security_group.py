@@ -74,25 +74,33 @@ def setup_security_group(conn, instance, provider, launch_config, all_role_names
   if environment.opts.get('answer_yes', False):
     environment.info('''{0}Updating security group to match the configuration for group {2}{1[ENDC]}'''.format(colors['RED'], colors, group_name))
     current_rules = []
-    for rule in group.rules:
-      if not rule.grants[0].cidr_ip:
-        current_rule = SecurityGroupRule(str(rule.ip_protocol),
-                          str(rule.from_port),
-                          str(rule.to_port),
-                          "0.0.0.0/0",
-                          str(rule.grants[0].name))
-      else:
-        current_rule = SecurityGroupRule(str(rule.ip_protocol),
-                          str(rule.from_port),
-                          str(rule.to_port),
-                          str(rule.grants[0].cidr_ip),
-                          None)
-                          
-      if current_rule not in expected_rules:
-        _revoke(group, conn, current_rule)
-      else:
-        current_rules.append(current_rule)
-          
+
+    existing_grants = []
+
+    ## Walk through existing groups and see if it's already authorized
+    ## on the group
+    for r in group.rules:
+      for g in r.grants:
+        if not g.cidr_ip:
+          current_rule = SecurityGroupRule(str(r.ip_protocol),
+                                          str(r.from_port),
+                                          str(r.to_port),
+                                          None,
+                                          str(g.name)
+                                          )
+        else:
+          current_rule = SecurityGroupRule(str(r.ip_protocol),
+                                          str(r.from_port),
+                                          str(r.to_port),
+                                          str(g.cidr_ip),
+                                          None
+                                          )
+
+        if current_rule not in expected_rules:
+          _revoke(group, conn, current_rule)
+        else:
+          current_rules.append(current_rule)
+
     for rule in expected_rules:
       if rule not in current_rules:
         _authorize(group, conn, rule)
@@ -163,6 +171,10 @@ def get_or_create_security_group(conn, group_name, description=""):
     if not group:
       group = conn.create_security_group(group_name, "A group for %s"%(group_name,))
     return group
+
+def get_security_group(conn, group_name, description=""):
+  groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
+  return group
 
 def get_machine_name(name, provider, config):
   launch_config_for_machine = provider._load_machine_desc(name)
