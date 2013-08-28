@@ -172,4 +172,4 @@ def get_machine_name(name, provider, config):
   elif provider.config['region'] != conn.region:
     this_conn = provider._load_connection_for_region(provider.config['region'])
     
-  return "%s-%s-%s-%s" % (launch_config_for_machine['region'], config['keyname'], provider.environment.environment, name)
+  return "%s-%s-%s" % (config['keyname'], provider.environment.environment, name)
