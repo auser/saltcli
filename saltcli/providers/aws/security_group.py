@@ -153,7 +153,7 @@ def _group_name(conn, provider, instance, config):
     name = launch_config_for_machine['group']
   else:
     name = instance.instance_name
-  return "%s-%s" % (key_name(conn, config), name)
+  return "%s-%s-%s" % (config['keyname'], provider.environment.environment, name)
 
 def get_or_create_security_group(conn, group_name, description=""):
     """
