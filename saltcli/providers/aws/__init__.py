@@ -226,14 +226,6 @@ Adding tags:
     
     
   ## Create the security group and attach the appropriate permissions
-  # def _setup_security_group(self, instance, launch_config):
-  #   conn = None
-    
-  #   if 'region' in launch_config:
-  #     conn = self._load_connection_for_region(launch_config['region'])
-  #   else:
-  #     conn = self.conn
-    
   #   ## Now that we have our connection...
   #   group_name = key_name(conn, instance, self.config) + "-" + instance.instance_name
   #   groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
