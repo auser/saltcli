@@ -41,6 +41,7 @@ Sample configuration:
                   - 22
                   - 4505
           master:
+            group: saltmaster
             ports:
               tcp:
                 '0.0.0.0/0':
@@ -77,6 +78,7 @@ Sample configuration:
                   - 2003
                   - 2004
           hadoop: &hadoop
+            group: hadoop
             flavor: m1.xlarge
             ports:
               tcp:
