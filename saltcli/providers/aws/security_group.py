@@ -11,11 +11,11 @@ import collections
 
 SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", "from_port", "to_port", "cidr_ip", "src_group_name"])
 
-def setup_security_group(conn, instance, provider, launch_config):
+def setup_security_group(conn, instance, provider, launch_config, all_role_names):
   ## Now that we have our connection...
   environment = instance.environment
   config = provider.config
-  group_name = _group_name(conn, instance, config)
+  group_name = _group_name(conn, provider, instance, config)
   groups = [g for g in conn.get_all_security_groups() if g.name == group_name]
   group = groups[0] if groups else None
   if not group:
@@ -25,14 +25,14 @@ def setup_security_group(conn, instance, provider, launch_config):
   expected_rules = []
 
   # if 'allow_groups' in launch_config:
-    # allow_groups_names = launch_config['allow_groups']
+    # all_group_names = launch_config['allow_groups']
     # If we want ALL groups
-    # if allow_groups_names == '*':
-      # allow_groups_names = config['machines'].keys()
+    # if all_group_names == '*':
+      # all_group_names = config['machines'].keys()
 
     ## This is a dirty way of looking up all groups
     # allow_groups = []
-    # for name in allow_groups_names:
+    # for name in all_group_names:
     #   if name != 'default':
     #     launch_config_for_machine = provider._load_machine_desc(name)
     #     if 'region' in launch_config_for_machine:
@@ -44,7 +44,7 @@ def setup_security_group(conn, instance, provider, launch_config):
     #     if gn != group_name:
     #       allow_groups.append(gn)
   
-  allow_groups_names = config['machines'].keys()
+  all_group_names = all_role_names
 
   if 'ports' in launch_config:
     for proto, port_conf in launch_config['ports'].iteritems():
@@ -58,11 +58,12 @@ def setup_security_group(conn, instance, provider, launch_config):
         else:
           name = str(cidr)
           if name == '*':
-            for instName in allow_groups_names:
-              sg = get_machine_name(instName, provider, config)
-              for port in ports:
-                rule = SecurityGroupRule(str(proto), str(port), str(port), None, sg)
-                expected_rules.append(rule)
+            for instName in all_group_names:
+              if instName != instance.name:
+                sg = get_machine_name(str(instName), provider, config)
+                for port in ports:
+                  rule = SecurityGroupRule(str(proto), str(port), str(port), None, sg)
+                  expected_rules.append(rule)
           else:
             sg = get_machine_name(name, provider, config)
             for port in ports:
@@ -146,8 +147,13 @@ def _revoke(group, conn, rule):
     """Revoke `rule` on `group`."""
     return _modify_sg(conn, group, rule, revoke=True)
 
-def _group_name(conn, instance, config):
-  return key_name(conn, config) + "-" + instance.instance_name
+def _group_name(conn, provider, instance, config):
+  launch_config_for_machine = provider._load_machine_desc(instance.name)
+  if 'group' in launch_config_for_machine:
+    name = launch_config_for_machine['group']
+  else:
+    name = instance.instance_name
+  return "%s-%s" % (key_name(conn, config), name)
 
 def get_or_create_security_group(conn, group_name, description=""):
     """
@@ -160,9 +166,10 @@ def get_or_create_security_group(conn, group_name, description=""):
 
 def get_machine_name(name, provider, config):
   launch_config_for_machine = provider._load_machine_desc(name)
+
   if 'region' in launch_config_for_machine:
     this_conn = provider._load_connection_for_region(launch_config_for_machine['region'])
   elif provider.config['region'] != conn.region:
     this_conn = provider._load_connection_for_region(provider.config['region'])
     
-  return key_name(this_conn, config)+"-"+provider.environment.environment+'-'+name
+  return "%s-%s-%s-%s" % (launch_config_for_machine['region'], config['keyname'], provider.environment.environment, name)

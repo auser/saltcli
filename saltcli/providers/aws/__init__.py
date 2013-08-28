@@ -67,7 +67,8 @@ class Aws(Provider):
       conn = self._load_connection_for_region(self.config['region'])
     
     keypair         = setup_keypair(conn, instance, self.config)
-    security_group  = setup_security_group(conn, instance, self, launch_config)
+    all_roles       = self._load_all_roles()
+    security_group  = setup_security_group(conn, instance, self, launch_config, all_roles)
     colors          = get_colors()
     
     print """Launching an AWS instance:
@@ -386,10 +387,20 @@ Adding tags:
     try:
       machine_config = dict_merge(machines[name], default)
     except Exception, e:
-      print "EXCEPTION: {0}".format(e)
       machine_config = default
     
     return machine_config
+
+  def _load_all_roles(self):
+    machine_config = self.environment.config['machines']
+    all_known_roles = []
+    for name, d in machine_config.iteritems():
+      if 'roles' in d:
+        for role in d['roles']:
+          if role not in all_known_roles:
+            all_known_roles.append(role)
+
+    return all_known_roles
     
   ## Load the aws credentials, either from the 
   ## config, or from the environment
